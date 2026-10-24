@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Side View Control Panel</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="15" rx="2.5"/><path d="M2.5 9h19M10 9v9.5"/><path d="M8 21.5h8"/></svg>
+      <div>
+        <h1>Side View</h1>
+        <p id="status">Control panel</p>
+      </div>
+    </div>
+    <nav class="jump" aria-label="Sections">
+      <a href="#monitors">Monitors</a><a href="#layout">Layout</a><a href="#screens">Screens</a><a href="#sound">Sound</a><a href="#look">Look</a><a href="#favorites">Favorites</a><a href="#community">Community</a><a href="#general">General</a><a href="#logins">Logins</a>
+    </nav>
+    <div class="meter" id="meter" title="What Side View is using right now (updates every 2 seconds)"></div>
+    <div class="top-actions">
+      <button type="button" id="showhide" class="btn"></button>
+      <button type="button" id="quit" class="btn danger">Quit</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card span-2" id="monitors">
+      <h2>Monitors</h2>
+      <p class="note">Click a monitor to move Side View there. Every monitor starts with the same layout; changes you make on one stay with it.</p>
+      <div class="monitors" id="monitor-list"></div>
+    </section>
+
+    <section class="card" id="layout">
+      <h2>Layout</h2>
+      <div class="field"><span class="label">Window</span><div class="seg" id="windows"></div></div>
+      <div class="field"><span class="label">Arrange</span><div class="seg" id="presets"></div></div>
+      <p class="note" id="presets-note" hidden>Unlock every screen to use a preset.</p>
+      <div class="field"><span class="label">Screens</span>
+        <div class="stepper"><button type="button" id="fewer" aria-label="One screen fewer">−</button><output id="count"></output><button type="button" id="more" aria-label="One more screen">+</button></div>
+      </div>
+      <label class="switch-row"><span>Lock to part of the screen<small>Your other apps' maximized windows fill the rest</small></span><input type="checkbox" role="switch" id="dock-on"></label>
+      <div class="field"><span class="label">Edge</span><div class="seg" id="dock-edge"></div></div>
+      <div class="field"><label class="label" for="dock-size">Size</label><select id="dock-size"></select></div>
+    </section>
+
+    <section class="card span-3" id="screens">
+      <h2>Screens</h2>
+      <p class="note">Everything for each screen in one row. The selected screen (teal) is where favorites open.</p>
+      <div class="table-wrap">
+        <table class="screens">
+          <thead><tr><th>Screen</th><th>Site</th><th>On</th><th>Sound</th><th>Video</th><th>Zoom</th><th>Memory</th><th>Lock</th><th>Float</th><th></th></tr></thead>
+          <tbody id="screen-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="sound">
+      <h2>Sound</h2>
+      <p class="note">One screen plays sound at a time.</p>
+      <div class="field"><label class="label" for="sound-from">Sound from</label><select id="sound-from"></select></div>
+      <ul class="playing" id="playing"></ul>
+      <button type="button" class="btn wide" id="mute-all">Mute every screen</button>
+    </section>
+
+    <section class="card" id="look">
+      <h2>Look &amp; behavior</h2>
+      <div class="switches" id="switches"></div>
+    </section>
+
+    <section class="card" id="scores">
+      <h2>Scores</h2>
+      <label class="switch-row"><span>Scores along the bottom</span><input type="checkbox" role="switch" id="ticker"></label>
+      <div class="field"><label class="label" for="league">League</label><select id="league"></select></div>
+    </section>
+
+    <section class="card span-2" id="favorites">
+      <h2>Favorites</h2>
+      <form class="add-fav" id="add-fav">
+        <input type="text" id="fav-url" placeholder="Add a site: type or paste a link" aria-label="Add a favorite site" spellcheck="false">
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <ul class="favs" id="fav-list"></ul>
+    </section>
+
+    <section class="card span-3" id="community">
+      <h2>Community: Side View .1107</h2>
+      <div class="community">
+        <div class="block">
+          <h3>Discord</h3>
+          <p class="note">Paste the server's invite link once, then open it from here any time.</p>
+          <form class="row-form" id="invite-form">
+            <input type="text" id="invite" placeholder="https://discord.gg/..." aria-label="Discord invite link" spellcheck="false">
+            <button type="submit" class="btn">Save</button>
+          </form>
+          <button type="button" class="btn primary wide" id="open-discord">Open Side View .1107</button>
+          <p class="note small" id="invite-note"></p>
+        </div>
+        <div class="block">
+          <h3>Share your layout</h3>
+          <p class="note">Copies a code with where your screens sit, never what's on them. Post it in #setups.</p>
+          <button type="button" class="btn primary wide" id="share-layout">Share my layout</button>
+          <input type="text" id="layout-code" readonly aria-label="Your layout code" hidden>
+          <p class="note small" id="share-note"></p>
+          <h3>Try someone's layout</h3>
+          <form class="row-form" id="import-form">
+            <input type="text" id="import-code" placeholder="Paste a layout code (SV1-...)" aria-label="Layout code" spellcheck="false">
+            <button type="submit" class="btn">Apply</button>
+          </form>
+          <p class="note small" id="import-note"></p>
+        </div>
+        <div class="block">
+          <h3>Cast your setup</h3>
+          <ol class="steps">
+            <li>Load only what you're allowed to show: your own content, an official free stream that allows it, or empty screens.</li>
+            <li>In Discord, join the <b>Side View Live</b> stage and request to speak.</li>
+            <li>Click <b>Share Your Screen</b> and pick the <b>Side View</b> window.</li>
+          </ol>
+          <p class="note">Never cast a game, show or movie you don't have the rights to. Watch parties: everyone watches on their own screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="general">
+      <h2>General</h2>
+      <label class="switch-row"><span>Start Side View with Windows</span><input type="checkbox" role="switch" id="startup"></label>
+      <div class="field"><label class="label" for="zoom">Page zoom, all screens</label><select id="zoom"></select></div>
+      <p class="note" id="site-zoom-note"></p>
+      <label class="switch-row"><span>Share logins across all screens</span><input type="checkbox" role="switch" id="shared"></label>
+      <p class="note">Log in once and every screen is signed in. Changing this reloads the screens.</p>
+    </section>
+
+    <section class="card span-2" id="logins">
+      <h2>Logins from Chrome</h2>
+      <p class="note" id="vault-status"></p>
+      <ol class="steps">
+        <li><button type="button" class="link" id="open-chrome">Open Chrome's password settings</button> (or type <code>chrome://password-manager/settings</code> in Chrome).</li>
+        <li>Under "Export passwords", click <b>Download file</b> and confirm with your Windows PIN or password.</li>
+        <li>Come back here, click <b>Import</b>, and pick the file Chrome saved.</li>
+      </ol>
+      <div class="actions">
+        <button type="button" class="btn primary" id="import">Import from Chrome…</button>
+        <button type="button" class="btn" id="clear">Remove all saved logins</button>
+      </div>
+      <div class="result" id="result" hidden>
+        <p id="result-text"></p>
+        <p class="warn" id="trash-row">That file holds every password in plain text. <button type="button" class="btn" id="trash">Move it to the Recycle Bin</button></p>
+      </div>
+      <p class="note">Saved logins are encrypted with your Windows account and only filled into pages from the matching site.</p>
+      <input type="search" id="filter" placeholder="Search saved logins" aria-label="Search saved logins">
+      <ul class="logins" id="login-list"></ul>
+    </section>
+
+    <section class="card" id="keys">
+      <h2>Shortcuts</h2>
+      <dl class="keys">
+        <dt>Ctrl+Alt+P</dt><dd>This control panel</dd>
+        <dt>Ctrl+Alt+S</dt><dd>Show or hide Side View</dd>
+        <dt>Ctrl+Alt+F</dt><dd>Settings bar on or off</dd>
+        <dt>Ctrl+Alt+D</dt><dd>Next monitor</dd>
+        <dt>Ctrl+Alt+T</dt><dd>Cover the taskbar</dd>
+        <dt>Ctrl+Alt+B</dt><dd>Bars around screens</dd>
+        <dt>Ctrl+Alt+N</dt><dd>Add a screen</dd>
+        <dt>Ctrl+Alt+M</dt><dd>Mute every screen</dd>
+        <dt>Ctrl+Alt+1/2/3</dt><dd>Switch window</dd>
+      </dl>
+    </section>
+  </main>
+  <script src="settings.js"></script>
+</body>
+</html>

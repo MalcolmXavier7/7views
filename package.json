@@ -1,0 +1,27 @@
+{
+  "name": "side-view",
+  "productName": "Side View",
+  "version": "0.1.0",
+  "description": "A RedZone-style 6-screen viewer for Windows: up to six live web screens on one monitor, with layouts, one-sound-at-a-time and a live score ticker.",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "koffi": "^3.3.1"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.sideview.app",
+    "productName": "Side View",
+    "files": ["src/**", "assets/**", "package.json"],
+    "asarUnpack": ["node_modules/koffi/**"],
+    "win": { "target": "nsis", "icon": "assets/icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}

@@ -1,0 +1,64 @@
+:root {
+  color-scheme: dark;
+  --text: #e6eaee;
+  --dim: #9aa5b0;
+  --live: #f5b13d;
+  --drop: #4fb3a6;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--text);
+  font: 500 12px/1 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+}
+
+/* the whole bar drags the window; its buttons don't */
+.bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 3px 0 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)), #161b21;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  touch-action: none;
+  animation: drop-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bar[hidden] { display: none; }
+.bar.live { box-shadow: inset 0 -2px 0 var(--live); }
+
+.title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background-color 140ms ease, color 140ms ease, transform 120ms ease;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+.btn:active { transform: scale(0.9); }
+.btn.on { color: var(--drop); }
+.bar.live #mute { color: var(--live); }
+.btn:focus-visible { outline: 2px solid var(--drop); outline-offset: -2px; }
+
+@keyframes drop-in { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .bar { animation: none; } .btn { transition: none; } }
+.bar.dragging { cursor: grabbing; }

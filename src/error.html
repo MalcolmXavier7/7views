@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Couldn't load</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; background: #0f1216; color: #d6dbe0; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; justify-content: center; padding: 0 7vw; box-sizing: border-box; }
+  h1 { margin: 0 0 1.5vw; font-size: 5vw; font-weight: 600; }
+  p { margin: 0; font-size: 3vw; line-height: 1.35; color: #7d8791; overflow-wrap: anywhere; }
+</style>
+<h1 id="title">Couldn't load this site</h1>
+<p id="why"></p>
+<script>
+  // Shown in a screen when its site fails to load. The reload button on the screen's bar tries the site again.
+  const q = new URLSearchParams(location.search);
+  let host = '';
+  try { host = new URL(q.get('url') || '').hostname.replace(/^www\./, ''); } catch {}
+  if (host) document.getElementById('title').textContent = `Couldn't load ${host}`;
+  const why = q.get('why') || 'the site did not answer';
+  document.getElementById('why').textContent = `${why.charAt(0).toUpperCase()}${why.slice(1)}. Check the link, or press reload on this screen's bar to try again.`;
+</script>

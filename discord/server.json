@@ -1,0 +1,163 @@
+{
+  "name": "Side View .1107",
+  "icon": "../assets/icon.png",
+  "color": 5223334,
+
+  "roles": [
+    { "key": "founder", "name": "Founder", "color": 16101693, "hoist": true, "perms": ["ADMINISTRATOR"] },
+    { "key": "mod", "name": "Mod", "color": 5223334, "hoist": true,
+      "perms": ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY", "ADD_REACTIONS", "ATTACH_FILES", "EMBED_LINKS",
+                "MANAGE_MESSAGES", "MANAGE_THREADS", "KICK_MEMBERS", "BAN_MEMBERS", "MODERATE_MEMBERS", "CREATE_INSTANT_INVITE",
+                "MUTE_MEMBERS", "MOVE_MEMBERS", "MENTION_EVERYONE", "CONNECT", "SPEAK", "STREAM"] },
+    { "key": "beta", "name": "Beta Tester", "color": 10181046, "hoist": true, "perms": [] },
+    { "key": "member", "name": "Member", "color": 9807270, "hoist": false, "perms": [] }
+  ],
+
+  "everyone": ["VIEW_CHANNEL", "SEND_MESSAGES", "SEND_MESSAGES_IN_THREADS", "CREATE_PUBLIC_THREADS", "READ_MESSAGE_HISTORY",
+               "ADD_REACTIONS", "ATTACH_FILES", "EMBED_LINKS", "USE_EXTERNAL_EMOJIS", "CONNECT", "SPEAK", "USE_VAD",
+               "REQUEST_TO_SPEAK", "CHANGE_NICKNAME", "USE_APPLICATION_COMMANDS"],
+
+  "categories": [
+    {
+      "name": "START HERE",
+      "channels": [
+        { "key": "welcome", "name": "welcome", "type": "text", "readOnly": true,
+          "topic": "What Side View is and how this server works. Start here." },
+        { "key": "rules", "name": "rules", "type": "text", "readOnly": true,
+          "topic": "The rules. Short version: legal sources only, never rebroadcast what isn't yours." },
+        { "key": "announcements", "name": "announcements", "type": "announcement", "readOnly": true,
+          "topic": "New Side View builds and server news." },
+        { "key": "roadmap", "name": "roadmap", "type": "text", "readOnly": true,
+          "topic": "What's being built next. Ideas go in #feature-requests." }
+      ]
+    },
+    {
+      "name": "SIDE VIEW",
+      "channels": [
+        { "key": "setups", "name": "setups", "type": "forum",
+          "topic": "Show your wall. One post per setup: a screenshot, your layout code (control panel > Community > Share my layout), and what you use it for. No stream links.",
+          "tags": ["2 screens", "3-4 screens", "5-6 screens", "Sports", "News", "Gaming", "Work", "Study", "Multi-monitor"] },
+        { "key": "sources", "name": "legal-sources", "type": "text",
+          "topic": "Official, free and legal places to watch: league and network YouTube channels, official free streams, news, NASA TV. No unlicensed stream sites. AutoMod blocks the known ones." },
+        { "key": "tips", "name": "tips-and-shortcuts", "type": "text",
+          "topic": "Tricks, shortcuts and ways to get more out of Side View." },
+        { "key": "requests", "name": "feature-requests", "type": "forum",
+          "topic": "One idea per post. React with 👍 on the ones you want most.",
+          "tags": ["Layouts", "Screens", "Sound", "Monitors", "Favorites", "Look", "Control panel", "Planned", "Shipped"] },
+        { "key": "bugs", "name": "bug-reports", "type": "forum",
+          "topic": "Something broke? One post per bug: what you did, what happened, what you expected, and your Windows version and monitors.",
+          "tags": ["Windows 11", "Windows 10", "Multi-monitor", "Video", "Sound", "Crash", "Fixed", "Can't reproduce"] },
+        { "key": "beta", "name": "beta-builds", "type": "text", "only": ["beta", "mod", "founder"],
+          "topic": "Early builds for Beta Testers. Try them, break them, report in #bug-reports." }
+      ]
+    },
+    {
+      "name": "WATCH TOGETHER",
+      "channels": [
+        { "key": "gamenight", "name": "game-night-chat", "type": "text",
+          "topic": "Talk while you watch. Everyone watches on their own legal source in their own Side View. Scores and reactions welcome, stream links are not." },
+        { "key": "party", "name": "Watch Party", "type": "voice", "noStream": true,
+          "topic": "Voice chat while everyone watches on their own screen. Screen sharing is off here so nobody rebroadcasts a game by accident." },
+        { "key": "live", "name": "Side View Live", "type": "stage",
+          "topic": "Cast your setup: demos of the app, layouts and new features. Mods bring speakers up to stream." }
+      ]
+    },
+    {
+      "name": "COMMUNITY",
+      "channels": [
+        { "key": "general", "name": "general", "type": "text", "topic": "Anything Side View." },
+        { "key": "clips", "name": "clips", "type": "text",
+          "topic": "Screenshots and clips of your own setup and your own content. Nothing you don't have the rights to." },
+        { "key": "offtopic", "name": "off-topic", "type": "text", "topic": "Everything else." }
+      ]
+    },
+    {
+      "name": "STAFF",
+      "channels": [
+        { "key": "modroom", "name": "mod-room", "type": "text", "only": ["mod", "founder"], "topic": "Mods only." },
+        { "key": "modupdates", "name": "discord-updates", "type": "text", "only": ["mod", "founder"],
+          "topic": "Discord sends its community notices here." }
+      ]
+    }
+  ],
+
+  "automod": {
+    "name": "No unlicensed streams",
+    "note": "Blocks links to well-known unlicensed streaming sites. Add more in Server Settings > AutoMod.",
+    "keywords": [
+      "*streamed.pk*", "*streamed.su*", "*foxxy.st*", "*crackstreams*", "*methstreams*", "*buffstreams*", "*sportsurge*",
+      "*streameast*", "*totalsportek*", "*daddylive*", "*sportshub.fan*", "*vipleague*", "*vipbox*", "*hesgoal*",
+      "*123movies*", "*fmovies*", "*soap2day*", "*popcornmovies*", "*putlocker*", "*gomovies*",
+      "free stream link", "pirate stream"
+    ],
+    "message": "That link points to an unlicensed stream site. Side View .1107 is legal sources only. See #rules."
+  },
+
+  "posts": {
+    "welcome": [
+      {
+        "title": "Welcome to Side View .1107",
+        "description": "This is the home of **Side View**: one full-screen wall with up to six live screens you arrange however you want. Your game in the middle, two more across the top, the scoreboard along the bottom.\n\nThis server is where we build the culture around the tool: share setups, trade tips, shape what gets built next, and watch together.",
+        "fields": [
+          { "name": "Start here", "value": "1. Read #rules (it's short).\n2. Post your setup in #setups.\n3. Ideas go to #feature-requests, problems to #bug-reports." },
+          { "name": "Watch together", "value": "Everyone watches on their own legal source in their own Side View. Talk in #game-night-chat or hop into **Watch Party** voice." },
+          { "name": "Cast your setup", "value": "Want to show off your wall or a new trick? Join **Side View Live** and ask a mod to bring you up. The pinned guide in #tips-and-shortcuts walks you through it." }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "title": "Rules",
+        "description": "Side View is a viewer. What you put on it is on you, and what you share here is on all of us. Keep it legal and keep it good.",
+        "fields": [
+          { "name": "1. Legal sources only", "value": "Official, licensed or free-and-legal streams only. No links to unlicensed stream sites, anywhere on the server. AutoMod blocks the known ones." },
+          { "name": "2. Never rebroadcast what isn't yours", "value": "Don't screen-share games, shows or movies to the server. Casting is for your setup, the app and your own content. Watch parties mean everyone watches on their own screen." },
+          { "name": "3. Respect each other", "value": "No harassment, hate, or spam. Disagree about the game, not about each other." },
+          { "name": "4. Keep channels on topic", "value": "Setups in #setups, ideas in #feature-requests, bugs in #bug-reports." },
+          { "name": "5. No personal info", "value": "No logins, passwords, addresses or anyone else's private details. Side View will never ask for your passwords here." },
+          { "name": "6. Private means private", "value": "This server is invite-only. Don't share invites without a mod's OK." }
+        ],
+        "footer": "Breaking rule 1 or 2 is a ban. Everything else gets a warning first."
+      }
+    ],
+    "roadmap": [
+      {
+        "title": "Roadmap",
+        "description": "Where Side View is headed. Vote on ideas in #feature-requests and the top ones move up.",
+        "fields": [
+          { "name": "Shipped", "value": "Full-screen wall on any monitor · Side / Center / Grid presets · Per-screen lock · Picture-in-picture · Crossed-bones favorites · Control panel (Ctrl+Alt+P) · Share and import layout codes" },
+          { "name": "Next", "value": "Layout presets you can name and save · Click a screen to make it the main one · Smarter video fill" },
+          { "name": "Later", "value": "Sync favorites between PCs · Synced watch-party timers · An installer and auto-updates" }
+        ]
+      }
+    ],
+    "tips": [
+      {
+        "title": "How to cast your setup",
+        "description": "Casting is for showing your Side View wall: layouts, tricks, new features. Never cast a game, show or movie you don't own the rights to.",
+        "fields": [
+          { "name": "1. Get your wall ready", "value": "Load only content you're allowed to show (your own, or an official free stream that allows it). Or use empty screens: layouts look great on their own." },
+          { "name": "2. Join Side View Live", "value": "Open the **Side View Live** stage and tap *Request to Speak*. A mod brings you up." },
+          { "name": "3. Share the window", "value": "Click **Share Your Screen**, pick the **Side View** window, and go." },
+          { "name": "4. Share the layout", "value": "Control panel (Ctrl+Alt+P) > Community > **Share my layout** copies a code. Paste it in #setups so others can try it with **Paste a layout**." }
+        ]
+      },
+      {
+        "title": "Shortcuts",
+        "description": "`Ctrl+Alt+P` control panel · `Ctrl+Alt+S` show/hide · `Ctrl+Alt+F` settings bar · `Ctrl+Alt+D` next monitor · `Ctrl+Alt+T` cover the taskbar · `Ctrl+Alt+B` bars around screens · `Ctrl+Alt+N` add a screen · `Ctrl+Alt+M` mute all · `Ctrl+Alt+1/2/3` windows"
+      }
+    ],
+    "sources": [
+      {
+        "title": "Legal sources",
+        "description": "Free and legal places to fill your screens. Post more here: official sources only.",
+        "fields": [
+          { "name": "Sports", "value": "Leagues' and teams' official YouTube channels (highlights, press conferences, some full games) · Free games on official league apps and networks when they offer them · Services you already pay for, signed in on your own screens" },
+          { "name": "News", "value": "Official live news channels on YouTube (most networks run free 24/7 streams)" },
+          { "name": "Everything else", "value": "NASA TV · Official music and esports channels on YouTube and Twitch · Your own streams and recordings" }
+        ],
+        "footer": "Not sure if a source is legal? If it isn't run by whoever owns the content, it doesn't go here."
+      }
+    ]
+  }
+}

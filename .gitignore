@@ -1,0 +1,7 @@
+node_modules/
+dist/
+test-recordings/
+.claude/
+*.log
+out.json
+discord/setup.js

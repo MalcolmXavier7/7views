@@ -1,0 +1,40 @@
+'use strict';
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('sideview', {
+  onState: (cb) => ipcRenderer.on('state', (_e, state) => cb(state)),
+  onTicker: (cb) => ipcRenderer.on('ticker', (_e, games) => cb(games)),
+  onStills: (cb) => ipcRenderer.on('stills', (_e, shots) => cb(shots)),
+  stillsShown: () => ipcRenderer.send('stills:shown'),
+  ready: () => ipcRenderer.send('shell:ready'),
+  // settings bar
+  setFlag: (key, on) => ipcRenderer.send('flag:set', key, on),
+  dragWall: (on) => ipcRenderer.send('wall:drag', on),
+  hide: () => ipcRenderer.send('wall:hide'),
+  monitorMenu: () => ipcRenderer.send('monitor:menu'),
+  setCount: (n) => ipcRenderer.send('panes:count', n),
+  setWindow: (k) => ipcRenderer.send('window:set', k),
+  arrange: (style) => ipcRenderer.send('free:arrange', style),
+  muteAll: () => ipcRenderer.send('mute:all'),
+  openSettings: () => ipcRenderer.send('settings:open'),
+  quit: () => ipcRenderer.send('app:quit'),
+  openFavorite: (k) => ipcRenderer.send('fav:open', k),
+  favoriteMenu: (k) => ipcRenderer.send('fav:menu', k),
+  // one screen
+  focus: (id) => ipcRenderer.send('pane:focus', id),
+  navigate: (id, input) => ipcRenderer.send('pane:navigate', id, input),
+  back: (id) => ipcRenderer.send('pane:back', id),
+  forward: (id) => ipcRenderer.send('pane:forward', id),
+  reload: (id) => ipcRenderer.send('pane:reload', id),
+  setMuted: (id, muted) => ipcRenderer.send('pane:mute', id, muted),
+  setFit: (id, mode) => ipcRenderer.send('pane:fit', id, mode),
+  toggleFavorite: (id) => ipcRenderer.send('fav:toggle', id),
+  popOut: (id) => ipcRenderer.send('pane:pip', id),
+  pipBack: (id) => ipcRenderer.send('pane:pip-back', id),
+  lockPane: (id, locked) => ipcRenderer.send('pane:lock', id, locked),
+  hidePane: (id, hidden) => ipcRenderer.send('pane:hide', id, hidden),
+  allowPopup: (id) => ipcRenderer.send('pane:allow', id),
+  dismissPopup: (id) => ipcRenderer.send('pane:dismiss', id),
+  dragStart: (id, kind, edges) => ipcRenderer.send('free:start', id, kind, edges),
+  drop: (id) => ipcRenderer.send('free:drop', id),
+});
