@@ -11,16 +11,23 @@ const appbar = require('./appbar');
 const vault = require('./vault');
 
 // SV_TEST=1 runs the built-in self-test (src/selftest.js) in a hidden window with its own throwaway profile, so it
-// never touches the real settings or a Side View that's already running. See selftest.js.
+// never touches the real settings or a 7 Views that's already running. See selftest.js.
 const TEST = process.env.SV_TEST === '1';
-if (TEST) app.setPath('userData', path.join(app.getPath('temp'), `side-view-test-${process.pid}`));
+if (TEST) app.setPath('userData', path.join(app.getPath('temp'), `7views-test-${process.pid}`));
+// The app was called "Side View" before it became 7 Views. Electron names the settings folder after the product,
+// so without this an upgrade would start from scratch (layouts, favorites, saved logins, screen sessions).
+// Keep using the old folder when it's there.
+else {
+  const legacy = path.join(app.getPath('appData'), 'Side View');
+  if (fs.existsSync(legacy)) app.setPath('userData', legacy);
+}
 
-// If Side View ever crashes, keep the evidence: Chromium crash dumps in userData/Crashpad (never uploaded) and a
-// short log in userData/side-view.log of crashed pages, crashed helper processes and uncaught errors.
+// If 7 Views ever crashes, keep the evidence: Chromium crash dumps in userData/Crashpad (never uploaded) and a
+// short log in userData/7views.log of crashed pages, crashed helper processes and uncaught errors.
 crashReporter.start({ uploadToServer: false });
 function logLine(msg) {
   try {
-    const file = path.join(app.getPath('userData'), 'side-view.log');
+    const file = path.join(app.getPath('userData'), '7views.log');
     if (fs.existsSync(file) && fs.statSync(file).size > 1024 * 1024) fs.renameSync(file, `${file}.old`);
     fs.appendFileSync(file, `${new Date().toISOString()} ${msg}
 `);
@@ -117,7 +124,7 @@ function defaultConfig() {
     sharedLogins: false, // every screen uses one login session instead of its own
     boxes: true, // false = no header bars, gaps or frames: the screens butt up into one picture
     favorites: [], // [{ url, title, icon }] icon is a data: URL or ''
-    discordInvite: '', // the Side View .1107 server's invite link, for the control panel's "Open Discord"
+    discordInvite: '', // the 7 Views .1107 server's invite link, for the control panel's "Open Discord"
     siteZoom: {}, // page zoom remembered per website: { 'pluto.tv': 0.6 }
     panes: [1, 2, 3, 4].map((n) => ({ id: `p${n}`, url: '', zoom: 0.4 })),
   };
@@ -269,7 +276,7 @@ function saveConfig() {
       fs.mkdirSync(path.dirname(configPath()), { recursive: true });
       fs.writeFileSync(configPath(), JSON.stringify(cfg, null, 2));
     } catch (err) {
-      console.error('[side-view] could not save settings:', err.message);
+      console.error('[7views] could not save settings:', err.message);
     }
   }, 300);
 }
@@ -454,7 +461,7 @@ function showWall() {
 function hideWall() {
   if (!win) return;
   win.hide();
-  releaseBand(); // the space goes back to your other windows while Side View is hidden
+  releaseBand(); // the space goes back to your other windows while 7 Views is hidden
   eachPip((pip) => pip.hide());
   visible = false;
   refreshTray();
@@ -906,7 +913,7 @@ function createPane(p) {
   // Pages get no permissions (camera, location, notifications...) except fullscreen, which only fills this screen's box.
   wc.session.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'fullscreen'));
   // Websites can't reach apps running on this PC. Discord's invite page, for one, scans ws://127.0.0.1:6463-6472
-  // for the Discord app, which then jumps in front of Side View. A page that is itself on localhost still can.
+  // for the Discord app, which then jumps in front of 7 Views. A page that is itself on localhost still can.
   const isLocal = (u) => { try { return ['127.0.0.1', 'localhost', '[::1]'].includes(new URL(u).hostname); } catch { return false; } };
   wc.session.webRequest.onBeforeRequest({ urls: ['*://127.0.0.1/*', '*://localhost/*', '*://[::1]/*', 'ws://127.0.0.1/*', 'ws://localhost/*', 'wss://127.0.0.1/*', 'wss://localhost/*'] }, (details, cb) => {
     // opening a localhost address in the screen itself (typed, a favorite) is you, not a page reaching out
@@ -1031,7 +1038,7 @@ function popOut(id) {
     maximizable: false,
     fullscreenable: false,
     backgroundColor: '#000000',
-    title: 'Side View picture-in-picture',
+    title: '7 Views picture-in-picture',
     webPreferences: {
       preload: path.join(__dirname, 'pip-preload.js'),
       contextIsolation: true,
@@ -1353,7 +1360,7 @@ async function fetchScores() {
       const json = await res.json();
       scores = (json.events || []).map(describe).filter(Boolean);
     } catch (err) {
-      console.warn('[side-view] score fetch failed:', err.message);
+      console.warn('[7views] score fetch failed:', err.message);
     }
   }
   sendTicker();
@@ -1698,7 +1705,7 @@ function settingsState() {
   };
 }
 
-// What Side View costs right now: total memory, CPU and processes, and each screen's share. A screen counts every
+// What 7 Views costs right now: total memory, CPU and processes, and each screen's share. A screen counts every
 // process its page uses (its own plus the ones its ad, player and other frames run in). Measured at most every 2 s.
 let resourceCache = { at: 0, data: { totalMB: 0, cpuPct: 0, processes: 0, perScreen: {} } };
 function resourceStats() {
@@ -1828,7 +1835,7 @@ function layoutCode() {
 
 function applyLayoutCode(raw) {
   const m = /^SV1-([A-Za-z0-9_-]{4,2000})$/.exec(String(raw || '').trim());
-  if (!m) return { ok: false, message: 'That isn\'t a Side View layout code. They start with SV1-.' };
+  if (!m) return { ok: false, message: 'That isn\'t a 7 Views layout code. They start with SV1-.' };
   let data;
   try { data = JSON.parse(Buffer.from(m[1], 'base64url').toString('utf8')); } catch { data = null; }
   const valid = data && data.v === 1 && Array.isArray(data.s) && data.s.length >= 1 && data.s.length <= MAX_PANES
@@ -1879,7 +1886,7 @@ function openSettings() {
     y: Math.round(wa.y + (wa.height - height) / 2),
     minWidth: 720,
     minHeight: 480,
-    title: 'Side View Control Panel',
+    title: '7 Views Control Panel',
     show: !TEST,
     backgroundColor: '#0b0e13',
     autoHideMenuBar: true,
@@ -2014,7 +2021,7 @@ function createWindow() {
     skipTaskbar: true,
     alwaysOnTop: cfg.onTop,
     backgroundColor: '#0b0e13',
-    title: 'Side View',
+    title: '7 Views',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -2055,7 +2062,7 @@ function refreshTray() {
   const zoomPct = Math.round(cfg.zoom * 100);
   const flag = (label, key, accelerator) => ({ label, type: 'checkbox', checked: cfg[key], accelerator, click: (item) => setFlag(key, item.checked) });
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: visible ? 'Hide Side View' : 'Show Side View', accelerator: 'Ctrl+Alt+S', click: toggleWall },
+    { label: visible ? 'Hide 7 Views' : 'Show 7 Views', accelerator: 'Ctrl+Alt+S', click: toggleWall },
     { label: 'Mute all screens', accelerator: 'Ctrl+Alt+M', click: muteAll },
     { label: 'Monitor', submenu: monitorMenu() },
     {
@@ -2125,14 +2132,14 @@ function refreshTray() {
     { label: 'Control panel…', accelerator: 'Ctrl+Alt+P', click: openSettings },
     { label: 'Show settings file', click: () => shell.showItemInFolder(configPath()) },
     { type: 'separator' },
-    { label: 'Quit Side View', click: () => app.quit() },
+    { label: 'Quit 7 Views', click: () => app.quit() },
   ]));
 }
 
 function createTray() {
   const img = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'tray.png'));
   tray = new Tray(img);
-  tray.setToolTip('Side View');
+  tray.setToolTip('7 Views');
   tray.on('click', toggleWall);
   tray.on('double-click', openSettings);
   refreshTray();

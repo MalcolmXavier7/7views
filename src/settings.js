@@ -1,6 +1,6 @@
 'use strict';
 
-// The control panel: every Side View setting on one page. Main pushes fresh state whenever anything changes
+// The control panel: every 7 Views setting on one page. Main pushes fresh state whenever anything changes
 // (from here, the settings bar, the tray or a shortcut), so the page always shows what's really happening.
 
 const $ = (id) => document.getElementById(id);
@@ -11,7 +11,7 @@ let logins = [];       // saved logins (only fetched when needed)
 const STYLE_LABEL = { row: 'Row', side: 'Side', center: 'Center', grid: 'Grid' };
 const FIT_LABEL = { off: 'Whole site', fit: 'Video only', fill: 'Video, fill', bottom: 'Video, fill, keep bottom' };
 const SWITCHES = [
-  ['topBar', 'Settings bar', 'The bar across the top of Side View'],
+  ['topBar', 'Settings bar', 'The bar across the top of 7 Views'],
   ['boxes', 'Bars around screens', 'Off: the screens butt up into one picture'],
   ['glass', 'Glass look', 'Frosted bars and rounded corners'],
   ['onTop', 'Keep on top', 'Stay above other windows'],
@@ -78,11 +78,11 @@ function renderTop() {
   $('status').textContent = S.visible
     ? `Showing on ${cur ? `${cur.index}: ${cur.name}` : 'a monitor'} · Window ${S.activeWindow + 1} · ${S.paneCount} screens`
     : 'Hidden. Ctrl+Alt+S or Show brings it back.';
-  $('showhide').textContent = S.visible ? 'Hide Side View' : 'Show Side View';
+  $('showhide').textContent = S.visible ? 'Hide 7 Views' : 'Show 7 Views';
   $('showhide').classList.toggle('primary', !S.visible);
 }
 $('showhide').addEventListener('click', () => api.act(S.visible ? 'hide' : 'show'));
-$('quit').addEventListener('click', () => { if (confirm('Quit Side View?')) api.act('quit'); });
+$('quit').addEventListener('click', () => { if (confirm('Quit 7 Views?')) api.act('quit'); });
 
 // ---------------- monitors ----------------
 
@@ -95,7 +95,7 @@ function renderMonitors() {
   for (const d of S.displays) {
     const card = el('button', `monitor${d.current ? ' on' : ''}`, { type: 'button' });
     card.setAttribute('aria-pressed', String(d.current));
-    card.title = d.current ? 'Side View is here' : `Move Side View to ${d.name}`;
+    card.title = d.current ? '7 Views is here' : `Move 7 Views to ${d.name}`;
     card.innerHTML = '<svg width="34" height="26" viewBox="0 0 34 26" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="18" rx="2.5"/><path d="M12 24.5h10M17 19.5v5"/></svg>';
     const text = el('span', 'mon-text');
     text.append(el('b', '', { textContent: `${d.index}: ${d.name}` }), el('small', '', { textContent: `${d.size}${d.primary ? ' · main display' : ''}` }));
@@ -432,7 +432,7 @@ $('trash').addEventListener('click', async () => {
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!confirm('Remove every saved login from Side View? Your passwords in Chrome are not affected.')) return;
+  if (!confirm('Remove every saved login from 7 Views? Your passwords in Chrome are not affected.')) return;
   const st = await api.clearLogins();
   if (st) { logins = st.logins; apply(st); }
 });

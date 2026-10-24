@@ -65,7 +65,7 @@ function showChooser(anchor, pw, user) {
     'box-shadow:0 4px 14px rgba(0,0,0,.45)', 'font:500 12px "Segoe UI",system-ui,sans-serif', 'color:#d6dbe0', 'padding:3px',
   ].join(';'));
   const head = document.createElement('div');
-  head.textContent = 'Side View: saved logins';
+  head.textContent = '7 Views: saved logins';
   head.setAttribute('style', 'padding:5px 8px;color:#7d8791;font-size:11px');
   box.append(head);
   for (const login of logins) {

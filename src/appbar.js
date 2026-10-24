@@ -83,7 +83,7 @@ function available() {
     sendMessage = shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32 dwMessage, _Inout_ APPBARDATA *pData)');
     return true;
   } catch (err) {
-    console.error('[side-view] AppBar API unavailable:', err.message);
+    console.error('[7views] AppBar API unavailable:', err.message);
     return false;
   }
 }
@@ -107,7 +107,7 @@ function data(rc) {
 // pixels). Electron's own display numbers are unreliable for a second monitor with different scaling.
 function monitors() {
   if (!available() || !enumMonitors) return [];
-  try { return enumMonitors(); } catch (err) { console.error('[side-view] could not list monitors:', err.message); return []; }
+  try { return enumMonitors(); } catch (err) { console.error('[7views] could not list monitors:', err.message); return []; }
 }
 
 // Where the window really is, in physical pixels (or null).
@@ -125,7 +125,7 @@ const SWP_NOACTIVATE = 0x0010;
 // ---- calls made from a background thread ----
 // Moving or resizing the window, and registering, moving or removing the reserved band, make Windows send our window
 // messages straight away (WM_SIZE, the AppBar notifications). Done synchronously, Electron answers those by running
-// JavaScript in the middle of koffi's native call, which crashed Side View (access violations, jumps to address 0,
+// JavaScript in the middle of koffi's native call, which crashed 7 Views (access violations, jumps to address 0,
 // 0xc0150010). Made on a worker thread instead, the messages arrive on the main thread through its normal message
 // loop after the call has started, and nothing runs re-entrantly.
 const later = (fn, ...args) => new Promise((resolve, reject) => fn.async(...args, (err, res) => (err ? reject(err) : resolve(res))));
@@ -164,7 +164,7 @@ async function unregisterAsync() {
   try {
     await later(sendMessage, ABM_REMOVE, data({ left: 0, top: 0, right: 0, bottom: 0 }));
   } catch (err) {
-    console.error('[side-view] could not release the docked space:', err.message);
+    console.error('[7views] could not release the docked space:', err.message);
   }
 }
 
@@ -180,7 +180,7 @@ function unregister() {
   try {
     sendMessage(ABM_REMOVE, data({ left: 0, top: 0, right: 0, bottom: 0 }));
   } catch (err) {
-    console.error('[side-view] could not release the docked space:', err.message);
+    console.error('[7views] could not release the docked space:', err.message);
   }
 }
 

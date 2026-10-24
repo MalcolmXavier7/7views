@@ -1,6 +1,6 @@
 'use strict';
-// Side View's built-in self-test. Run it with:  SV_TEST=1 SV_TEST_OUT=results.json electron .
-// It starts a hidden Side View with a throwaway profile (main.js switches userData when SV_TEST=1), drives every
+// 7 Views' built-in self-test. Run it with:  SV_TEST=1 SV_TEST_OUT=results.json electron .
+// It starts a hidden 7 Views with a throwaway profile (main.js switches userData when SV_TEST=1), drives every
 // feature through the real code, times the hot paths, runs the A/B speed comparisons, writes everything to
 // SV_TEST_OUT as JSON and quits. Nothing appears on screen and the real settings are never touched.
 

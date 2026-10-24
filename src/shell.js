@@ -106,8 +106,8 @@ const tab = button('toptab', ICON.down, 'Show the settings bar (Ctrl+Alt+F)', ()
 wall.append(bar, tab);
 
 const brand = el('div', 'brand');
-brand.innerHTML = `${ICON.grip}<span>Side View</span>`;
-brand.title = 'Drag the bar to move Side View to another monitor';
+brand.innerHTML = `${ICON.grip}<span>7 Views</span>`;
+brand.title = 'Drag the bar to move 7 Views to another monitor';
 
 const winsw = el('div', 'seg winsw');
 winsw.setAttribute('role', 'group');
@@ -150,9 +150,9 @@ let favKey = '';
 
 const toggles = [
   ['freeLocked', ICON.lock, 'Lock every screen in place', 'Unlock: screens can move again'],
-  ['dockOn', ICON.dock, 'Lock Side View to part of the screen; other apps use the rest (Ctrl+Alt+K)', 'Use the whole screen again (Ctrl+Alt+K)'],
+  ['dockOn', ICON.dock, 'Lock 7 Views to part of the screen; other apps use the rest (Ctrl+Alt+K)', 'Use the whole screen again (Ctrl+Alt+K)'],
   ['coverTaskbar', ICON.taskbar, 'Cover the taskbar too (Ctrl+Alt+T)', 'Leave room for the taskbar (Ctrl+Alt+T)'],
-  ['onTop', ICON.pin, 'Keep Side View above other windows', 'Let other windows go on top of Side View'],
+  ['onTop', ICON.pin, 'Keep 7 Views above other windows', 'Let other windows go on top of 7 Views'],
   ['boxes', ICON.boxes, 'Show the bars around each screen (Ctrl+Alt+B)', 'Hide the bars so the screens read as one picture (Ctrl+Alt+B)'],
   ['glass', ICON.glass, 'Glass look', 'Plain look'],
   ['ticker', ICON.scores, 'Show scores along the bottom', 'Hide the scores'],
@@ -171,8 +171,8 @@ tools.append(
   button('ibtn', ICON.gear, 'Control panel: every setting in one place (Ctrl+Alt+P)', () => sv.openSettings()),
   el('span', 'sep'),
   button('ibtn', ICON.up, 'Hide this bar (Ctrl+Alt+F)', () => sv.setFlag('topBar', false)),
-  button('ibtn', ICON.minus, 'Hide Side View (Ctrl+Alt+S brings it back)', () => sv.hide()),
-  button('ibtn quit', ICON.x, 'Quit Side View', () => sv.quit()),
+  button('ibtn', ICON.minus, 'Hide 7 Views (Ctrl+Alt+S brings it back)', () => sv.hide()),
+  button('ibtn quit', ICON.x, 'Quit 7 Views', () => sv.quit()),
 );
 
 bar.append(brand, winsw, monBtn, presets, counter, favs, tools);
