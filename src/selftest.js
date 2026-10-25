@@ -113,7 +113,7 @@ module.exports = async function selftest(h) {
     try {
       fs.writeFileSync(file, JSON.stringify({
         width: 340, side: 'left', mode: 'bar', layout: 'main', arrangeStyle: 'spiral', zoom: 99,
-        panes: Array.from({ length: 9 }, (_, k) => ({ id: `x${k}`, url: k === 0 ? 'javascript:alert(1)' : `https://site${k}.example/` })),
+        panes: Array.from({ length: 12 }, (_, k) => ({ id: `x${k}`, url: k === 0 ? 'javascript:alert(1)' : `https://site${k}.example/` })),
         favorites: [{ url: 'file:///C:/secret' }, { url: 'https://ok.example/', icon: 'data:text/html,<script>' }],
         discordInvite: 'https://evil.example/',
       }));
@@ -144,16 +144,16 @@ module.exports = async function selftest(h) {
   });
 
   // ================= screens and presets =================
-  await test('Screens', 'Screen count stays between 2 and 6', async () => {
+  await test('Screens', 'Screen count stays between 2 and 9', async () => {
     h.setPaneCount(1);
     assert(h.cfg.panes.length === h.MIN_PANES, `went below ${h.MIN_PANES}`);
-    h.setPaneCount(9);
+    h.setPaneCount(12);
     await sleep(320); // still on a preset, so the screens glide to an even spread
     assert(h.cfg.panes.length === h.MAX_PANES, `went above ${h.MAX_PANES}`);
     assert(noOverlap(), 'new screens overlap');
     h.setPaneCount(4);
     await sleep(320);
-    return '2..6 enforced, new screens placed without overlap';
+    return '2..9 enforced, new screens placed without overlap';
   });
   await test('Screens', 'Row: 2 screens are equal halves, 3 are equal thirds', async () => {
     unlockAll();
@@ -176,11 +176,11 @@ module.exports = async function selftest(h) {
     h.cfg.arrangeStyle = 'center';
     return `halves ${two.map((w) => w.toFixed(3)).join(' / ')} · thirds ${three.map((w) => w.toFixed(3)).join(' / ')}`;
   });
-  await test('Screens', 'Every preset fits 1 to 6 screens with no overlaps', () => {
+  await test('Screens', 'Every preset fits 2 to 9 screens with no overlaps', () => {
     const bad = [];
-    for (let n = 2; n <= 6; n++) {
+    for (let n = 2; n <= 9; n++) {
       h.setPaneCount(n);
-      for (const style of ['row', 'side', 'center', 'grid']) {
+      for (const style of h.ARRANGE_STYLES) {
         h.cfg.free = h.presetLayout(style);
         if (!noOverlap()) bad.push(`${style}/${n}`);
         if (ids().some((id) => !free()[id])) bad.push(`${style}/${n} missing`);
@@ -190,7 +190,28 @@ module.exports = async function selftest(h) {
     h.cfg.free = h.presetLayout('center');
     h.layoutPanes();
     assert(!bad.length, `problems: ${bad.join(', ')}`);
-    return '20 combinations clean';
+    return `${8 * h.ARRANGE_STYLES.length} combinations clean`;
+  });
+  await test('Screens', 'Middle: 7 screens are 3 left, main in the middle, 3 right', async () => {
+    unlockAll();
+    h.setPaneCount(7);
+    await sleep(320);
+    h.PANEL_ACTIONS.arrange('middle');
+    await sleep(320);
+    const rs = ids().map((id) => free()[id]);
+    const main = rs[rs.length - 1];
+    const left = rs.filter((r) => r.x < 0.01);
+    const right = rs.filter((r) => r.x + r.w > 0.99);
+    assert(left.length === 3 && right.length === 3, `left ${left.length}, right ${right.length}`);
+    assert(main.x > 0.2 && main.x + main.w < 0.8 && main.h > 0.98, 'main is not the middle column');
+    assert(noOverlap(), 'overlap');
+    h.setPaneCount(4);
+    await sleep(320);
+    h.stopTween();
+    h.cfg.arrangeStyle = 'center';
+    h.cfg.free = h.presetLayout('center');
+    h.layoutPanes();
+    return `side columns ${left[0].w.toFixed(3)}, middle ${main.w.toFixed(3)}`;
   });
   await test('Screens', 'Turning screens off and on (at least one stays on)', () => {
     const all = h.cfg.panes.map((p) => p.id);
@@ -283,27 +304,25 @@ module.exports = async function selftest(h) {
   });
 
   // ================= locks =================
-  await test('Locks', 'A locked screen blocks presets and layout codes', () => {
+  await test('Locks', 'A locked screen blocks layout codes; a preset unlocks it', () => {
     grid();
-    const before = JSON.stringify(free());
     h.setPaneLocked(ids()[0], true);
     assert(h.anyLocked(), 'lock not registered');
-    h.PANEL_ACTIONS.arrange('side');
-    assert(JSON.stringify(free()) === before, 'a preset moved screens while one was locked');
     const res = h.applyLayoutCode(h.layoutCode());
     assert(!res.ok, 'a layout code applied while locked');
-    h.setPaneLocked(ids()[0], false);
-    return 'presets and codes wait for unlock';
-  });
-  await test('Locks', 'Lock all blocks presets', () => {
-    grid();
-    const before = JSON.stringify(free());
-    h.setFlag('freeLocked', true);
     h.PANEL_ACTIONS.arrange('side');
-    const after = JSON.stringify(free());
-    h.setFlag('freeLocked', false);
-    assert(after === before, 'preset ran under lock all');
-    return 'frozen';
+    assert(!h.anyLocked() && h.cfg.arrangeStyle === 'side', 'the preset did not unlock and run');
+    h.stopTween();
+    return 'codes wait; presets unlock and arrange';
+  });
+  await test('Locks', 'Lock all stops drags; a preset turns it off', () => {
+    grid();
+    h.setFlag('freeLocked', true);
+    h.PANEL_ACTIONS.arrange('row');
+    assert(!h.cfg.freeLocked && h.cfg.arrangeStyle === 'row', 'the preset did not run under lock all');
+    h.stopTween();
+    h.cfg.arrangeStyle = 'center';
+    return 'preset wins over lock all';
   });
 
   // ================= picture-in-picture =================

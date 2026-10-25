@@ -126,6 +126,7 @@ presets.setAttribute('role', 'group');
 presets.setAttribute('aria-label', 'Arrange screens');
 const presetBtns = [
   ['side', 'Side', 'Main screen big on the left, the rest beside it'],
+  ['middle', 'Middle', 'Main screen big in the middle, the rest split into columns on the left and right'],
   ['center', 'Center', 'Small screens across the top, main big in the middle, a wide one along the bottom'],
   ['grid', 'Grid', 'Every screen the same size'],
   ['row', 'Row', 'Every screen side by side, equal widths: 2 halves, 3 thirds'],
@@ -227,11 +228,10 @@ function renderBar() {
   winBtns.forEach((b, k) => { b.classList.toggle('on', k === S.activeWindow); b.setAttribute('aria-pressed', String(k === S.activeWindow)); });
   const cur = S.displays.find((d) => d.current) || S.displays[0];
   monBtn.innerHTML = `${ICON.monitor}<span>${cur ? `${cur.index}: ${cur.name}` : 'Monitor'}</span>${ICON.caret}`;
-  const presetsOff = S.freeLocked || S.anyLocked;
+  const locked = S.freeLocked || S.anyLocked;
   for (const [style, b] of presetBtns) {
     b.classList.toggle('on', style === S.arrangeStyle);
-    b.disabled = presetsOff;
-    b.title = presetsOff ? 'Unlock every screen to use a preset' : b.dataset.tip;
+    b.title = locked ? `${b.dataset.tip} (unlocks the screens)` : b.dataset.tip;
   }
   countLabel.innerHTML = `<b>${S.paneCount}</b><span class="word">&nbsp;screens</span>`;
   minusBtn.disabled = S.paneCount <= S.minPanes;

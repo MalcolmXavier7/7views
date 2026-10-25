@@ -8,7 +8,7 @@ const api = window.settings;
 let S = null;          // latest state
 let logins = [];       // saved logins (only fetched when needed)
 
-const STYLE_LABEL = { row: 'Row', side: 'Side', center: 'Center', grid: 'Grid' };
+const STYLE_LABEL = { row: 'Row', side: 'Side', middle: 'Middle', center: 'Center', grid: 'Grid' };
 const FIT_LABEL = { off: 'Whole site', fit: 'Video only', fill: 'Video, fill', bottom: 'Video, fill, keep bottom' };
 const SWITCHES = [
   ['topBar', 'Settings bar', 'The bar across the top of 7 Views'],
@@ -111,7 +111,7 @@ function renderMonitors() {
 function renderLayout() {
   segmented($('windows'), Array.from({ length: S.windowCount }, (_, k) => [k, `${k + 1}`]), S.activeWindow, (k) => api.act('window', k));
   const locked = S.flags.freeLocked || S.anyLocked;
-  segmented($('presets'), S.styles.map((s) => [s, STYLE_LABEL[s] || s]), S.arrangeStyle, (s) => api.act('arrange', s), locked);
+  segmented($('presets'), S.styles.map((s) => [s, STYLE_LABEL[s] || s]), S.arrangeStyle, (s) => api.act('arrange', s));
   $('presets-note').hidden = !locked;
   $('count').textContent = `${S.paneCount}`;
   $('fewer').disabled = S.paneCount <= S.minPanes;

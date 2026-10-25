@@ -1,6 +1,6 @@
-# 7 Views: a RedZone-style 6-screen viewer for Windows
+# 7 Views: a RedZone-style multi-screen viewer for Windows
 
-Watch up to six games, streams or sites at once on one monitor, like your own RedZone wall. 7 Views fills the monitor you pick with 2 to 6 live web screens, arranges them in one click, and keeps a live score ticker running along the bottom.
+Watch up to nine games, streams or sites at once on one monitor, like your own RedZone wall. 7 Views fills the monitor you pick with 2 to 9 live web screens, arranges them in one click, and keeps a live score ticker running along the bottom.
 
 > 7 Views is a viewer, not a stream source. It shows the websites you open in it, from services you already have access to. It isn't affiliated with the NFL, NFL RedZone or any league or broadcaster. Use legal, licensed sources.
 
@@ -12,10 +12,11 @@ Why 7? It's my number (MX7). The name is a signature, not a screen count.
 
 ## Features
 
-- **2 to 6 screens** on one full-screen wall, on any monitor.
+- **2 to 9 screens** on one full-screen wall, on any monitor.
 - **Layouts in one click:**
   - **Row:** side by side at equal widths (2 halves, 3 thirds).
   - **Side:** one big screen with the rest stacked beside it.
+  - **Middle:** the main game big in the middle, the rest split into a column on each side (7 screens: 3 left, 3 right).
   - **Center:** small screens on top, the main game big in the middle, a wide strip along the bottom.
   - **Grid:** even tiles.
 - **Move anything:** drag a screen's bar to move it, drop it on another screen to swap them, and drag an edge to resize. Screens glide into place.
@@ -54,8 +55,8 @@ To build a Windows installer, run `npm run dist`; the output goes to `dist/`.
 **Settings bar (top).** From left to right:
 - **Move or pick:** drag the bar to carry 7 Views to another monitor, or use the monitor picker.
 - **1 2 3:** your three saved setups.
-- **Row / Side / Center / Grid:** the layout presets.
-- **− N screens +:** add or remove screens (2 to 6).
+- **Row / Side / Middle / Center / Grid:** the layout presets. Picking one unlocks the screens and arranges them.
+- **− N screens +:** add or remove screens (2 to 9).
 - **Favorites.**
 - **Switches:** lock all, lock to part of the screen, cover the taskbar, keep on top, bars around screens, glass look, score ticker.
 - Mute all, control panel, hide the bar, hide 7 Views, quit.
@@ -90,7 +91,7 @@ To build a Windows installer, run `npm run dist`; the output goes to `dist/`.
 SV_TEST=1 SV_TEST_OUT=out.json npx electron .
 ```
 
-It runs 46 checks in a hidden window with a throwaway profile, so it never touches your settings.
+It runs 47 checks in a hidden window with a throwaway profile, so it never touches your settings.
 
 ## Files
 

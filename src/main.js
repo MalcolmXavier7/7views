@@ -60,7 +60,7 @@ const ZOOM_PRESETS = [0.3, 0.4, 0.5, 0.6, 0.75];
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 1.5;
 const MIN_PANES = 2;
-const MAX_PANES = 6;
+const MAX_PANES = 9;
 const MAX_FAVORITES = 16;
 const DOCK_EDGES = ['left', 'right', 'top', 'bottom'];
 const DOCK_MIN = 0.2;
@@ -68,7 +68,7 @@ const DOCK_MAX = 0.8;
 const DISCORD_INVITE = /^https:\/\/(discord\.gg|discord\.com\/invite)\/[A-Za-z0-9-]{2,40}$/;
 const WINDOW_COUNT = 3; // saved workspaces: "Window 1" .. "Window 3"
 // presets: all in a row (equal widths), main + side column, main in the middle, even grid
-const ARRANGE_STYLES = ['row', 'side', 'center', 'grid'];
+const ARRANGE_STYLES = ['row', 'side', 'middle', 'center', 'grid'];
 // "show only video": off, whole video in the box, video fills the box (edges cropped), or fills it keeping the bottom
 // of the picture (where score bugs and tickers live) and cropping from the top
 const FIT_MODES = ['off', 'fit', 'fill', 'bottom'];
@@ -580,11 +580,25 @@ function presetLayout(style) {
     const cols = Math.ceil(Math.sqrt(list.length));
     const rows = Math.ceil(list.length / cols);
     list.forEach((p, k) => put(p, (k % cols) / cols, Math.floor(k / cols) / rows, 1 / cols, 1 / rows));
+  } else if (style === 'middle') {
+    // main big in the middle, the rest split into a column on each side (7 screens: 3 left, main, 3 right)
+    const left = rest.slice(0, Math.ceil(rest.length / 2));
+    const right = rest.slice(left.length);
+    const sideW = right.length ? 0.22 : 0.3;
+    left.forEach((p, k) => put(p, 0, k / left.length, sideW, 1 / left.length));
+    put(main, sideW, 0, 1 - sideW * (right.length ? 2 : 1), 1);
+    right.forEach((p, k) => put(p, 1 - sideW, k / right.length, sideW, 1 / right.length));
   } else if (style === 'center') {
     const bottom = rest.length >= 3 ? rest.pop() : null;
-    const topRow = 0.26;
+    const rows = rest.length > 4 ? 2 : 1; // more than 4 across the top gets too thin: two rows instead
+    const perRow = Math.ceil(rest.length / rows);
+    const topRow = rows === 2 ? 0.36 : 0.26;
     const botRow = bottom ? 0.2 : 0;
-    rest.forEach((p, k) => put(p, k / rest.length, 0, 1 / rest.length, topRow));
+    rest.forEach((p, k) => {
+      const r = Math.floor(k / perRow);
+      const inRow = r === rows - 1 ? rest.length - perRow * r : perRow;
+      put(p, (k % perRow) / inRow, (r * topRow) / rows, 1 / inRow, topRow / rows);
+    });
     put(main, 0, topRow, 1, 1 - topRow - botRow);
     if (bottom) put(bottom, 0, 1 - botRow, 1, botRow);
   } else {
@@ -1479,11 +1493,20 @@ ipcMain.on('pip:drag', (e, on) => {
   };
 });
 
-// A preset was picked. Locked screens must stay put, so presets wait until every screen is unlocked.
+// A preset was picked. Picking one is a deliberate "arrange everything", so it unlocks every screen first (locks are
+// for keeping a hand-made arrangement from being bumped, not for blocking the buttons); lock again once it's placed.
+function arrange(style) {
+  if (!ARRANGE_STYLES.includes(style)) return;
+  cfg.arrangeStyle = style;
+  cfg.freeLocked = false;
+  for (const p of cfg.panes) p.locked = false;
+  tweenTo(presetLayout(style), 260, true);
+  saveConfig();
+  refreshTray();
+  sendState();
+}
 ipcMain.on('free:arrange', (e, style) => {
-  if (!fromShell(e) || cfg.freeLocked || anyLocked()) return;
-  if (ARRANGE_STYLES.includes(style)) cfg.arrangeStyle = style;
-  tweenTo(presetLayout(cfg.arrangeStyle), 260, true);
+  if (fromShell(e)) arrange(style);
 });
 
 // Moving or resizing a screen. Once a drag starts, main follows the pointer itself (the shell stops getting pointer
@@ -1776,11 +1799,7 @@ const PANEL_ACTIONS = {
   display: (id) => { if (screen.getAllDisplays().some((d) => d.id === Number(id))) setDisplay(Number(id)); },
   flag: (key, on) => { if (FLAGS.includes(key)) setFlag(key, Boolean(on)); },
   window: (k) => setWindow(Number(k)),
-  arrange: (style) => {
-    if (cfg.freeLocked || anyLocked() || !ARRANGE_STYLES.includes(style)) return;
-    cfg.arrangeStyle = style;
-    tweenTo(presetLayout(style), 260, true);
-  },
+  arrange: (style) => arrange(style),
   count: (n) => { if (Number.isFinite(Number(n))) setPaneCount(Math.round(Number(n))); },
   muteAll: () => muteAll(),
   navigate: (id, input) => {
@@ -2157,7 +2176,7 @@ function testHooks() {
     get shellReady() { return shellReady; },
     get freeDrag() { return freeDrag; },
     set freeDrag(d) { freeDrag = d; },
-    views, PERF, PANEL_ACTIONS, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
+    views, PERF, PANEL_ACTIONS, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
     loadConfig, saveConfig, configPath, presetLayout, ensurePlaced, placeNew, hitsOthers, overlap, visiblePanes,
     setPaneCount, setPaneHidden, setPaneLocked, popOut, dockBack, setWindow, setDisplay, toggleFavorite, addFavorite,
     moveFavorite, isFavorite, openFavorite, layoutCode, applyLayoutCode, setFit, setMuted, muteAll, normalizeInput,
