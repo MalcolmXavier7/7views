@@ -127,9 +127,14 @@ function defaultConfig() {
     favorites: [], // [{ url, title, icon }] icon is a data: URL or ''
     discordInvite: '', // the 7 Views .1107 server's invite link, for the control panel's "Open Discord"
     siteZoom: {}, // page zoom remembered per website: { 'pluto.tv': 0.6 }
+    windowNames: [...WINDOW_NAMES], // what the three windows are called on the bar
     panes: [1, 2, 3, 4].map((n) => ({ id: `p${n}`, url: '', zoom: 0.4 })),
   };
 }
+
+const WINDOW_NAMES = ['Sports', 'TV', 'Work'];
+const cleanName = (x) => String(typeof x === 'string' ? x : '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 12);
+let startupNote = ''; // something loadConfig had to change that the owner should hear about once
 
 function cleanFree(obj) {
   const free = {};
@@ -240,6 +245,8 @@ function loadConfig() {
     .slice(-200)
     .map(([site, z]) => [site, clamp(Number(z), ZOOM_MIN, ZOOM_MAX)]));
   if (!LEAGUES.some(([, id]) => id === out.league)) out.league = base.league;
+  out.windowNames = WINDOW_NAMES.map((d, k) => cleanName(Array.isArray(saved.windowNames) ? saved.windowNames[k] : '') || d);
+  if (Array.isArray(saved.panes) && saved.panes.length > MAX_PANES) startupNote = `This setup had ${saved.panes.length} screens; 7 Views shows up to ${MAX_PANES}, so the extra ones were dropped.`;
 
   out.displayId = Number.isFinite(Number(out.displayId)) ? Number(out.displayId) : 0;
   out.active = clamp(Math.round(Number(out.active)) || 0, 0, WINDOW_COUNT - 1);
@@ -275,9 +282,14 @@ function saveConfig() {
     try {
       stashWindow();
       fs.mkdirSync(path.dirname(configPath()), { recursive: true });
-      fs.writeFileSync(configPath(), JSON.stringify(cfg, null, 2));
+      // written beside the real file and swapped in, so a crash or power cut mid-write can't leave half a file
+      // (which would load as a fresh install)
+      const tmp = `${configPath()}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2));
+      fs.renameSync(tmp, configPath());
     } catch (err) {
       console.error('[7views] could not save settings:', err.message);
+      logLine(`could not save settings: ${err.message}`);
     }
   }, 300);
 }
@@ -856,6 +868,8 @@ function sendState() {
     minFreeH: MIN_FREE_H,
     topBar: cfg.topBar,
     activeWindow: cfg.active,
+    windowNames: cfg.windowNames,
+    notice,
     displays: displayList(),
     paneCount: cfg.panes.length,
     minPanes: MIN_PANES,
@@ -1221,6 +1235,7 @@ function setWindow(k) {
   if (!Number.isFinite(Number(k))) return;
   k = clamp(Math.round(Number(k)), 0, WINDOW_COUNT - 1);
   if (!win || k === cfg.active) return;
+  clearNotice();
   stopTween();
   for (const p of cfg.panes) dockBack(p.id); // popped-out screens belong to the window we're leaving
   stashWindow();
@@ -1413,10 +1428,18 @@ function setLeague(id) {
 
 // ---------- IPC (from the settings bar and the screens' bars) ----------
 
+let saidRestarted = false;
 ipcMain.on('shell:ready', (e) => {
   if (!fromShell(e)) return;
   shellReady = true;
   sentFavKey = ''; // a fresh shell has no favorites yet
+  if (process.argv.includes('--restarted') && !saidRestarted) {
+    saidRestarted = true;
+    showNotice('7 Views restarted itself after an error', 'openLog', 'Show log', 20000);
+  } else if (startupNote) {
+    showNotice(startupNote, '', '', 20000);
+  }
+  startupNote = '';
   layoutPanes();
   sendTicker();
 });
@@ -1514,10 +1537,116 @@ ipcMain.on('pip:drag', (e, on) => {
 // for keeping a hand-made arrangement from being bumped, not for blocking the buttons); lock again once it's placed.
 function arrange(style) {
   if (!ARRANGE_STYLES.includes(style)) return;
+  // the way back, when this drops locks someone set on purpose
+  const locks = cfg.panes.filter((p) => p.locked).map((p) => p.id);
+  const before = cfg.freeLocked || locks.length
+    ? { window: cfg.active, displayId: cfg.displayId, style: cfg.arrangeStyle, free: JSON.parse(JSON.stringify(cfg.free)), freeLocked: cfg.freeLocked, locks }
+    : null;
   cfg.arrangeStyle = style;
   cfg.freeLocked = false;
   for (const p of cfg.panes) p.locked = false;
   tweenTo(presetLayout(style), 260, true);
+  saveConfig();
+  refreshTray();
+  if (before) {
+    showNotice('Screens unlocked and rearranged', 'undoArrange', 'Undo');
+    undoArrange = before;
+  }
+  sendState();
+}
+
+// ---------- notices ----------
+// One short line in the settings bar and the control panel, gone after a few seconds, with at most one button.
+let notice = null; // { text, action, label }
+let noticeTimer = null;
+let undoArrange = null; // the layout and locks a preset replaced
+
+function clearNotice() {
+  clearTimeout(noticeTimer);
+  if (!notice) return;
+  notice = null;
+  undoArrange = null;
+  sendState();
+}
+
+function showNotice(text, action = '', label = '', ms = 10000) {
+  clearTimeout(noticeTimer);
+  undoArrange = null;
+  notice = { text, action, label };
+  noticeTimer = setTimeout(clearNotice, ms);
+  sendState();
+}
+
+const NOTICE_ACTIONS = {
+  undoArrange: (u) => {
+    if (!u || u.window !== cfg.active || u.displayId !== cfg.displayId) return;
+    cfg.arrangeStyle = u.style;
+    const free = Object.fromEntries(Object.entries(u.free).filter(([id]) => paneById(id)));
+    tweenTo(free, 220, true, () => {
+      cfg.freeLocked = u.freeLocked;
+      for (const p of cfg.panes) p.locked = u.locks.includes(p.id);
+      ensurePlaced();
+      saveConfig();
+      refreshTray();
+      layoutPanes();
+    });
+  },
+  openLog: () => shell.showItemInFolder(path.join(app.getPath('userData'), '7views.log')),
+};
+
+function noticeAct() {
+  const fn = notice && NOTICE_ACTIONS[notice.action];
+  const u = undoArrange;
+  clearNotice();
+  if (fn) fn(u);
+}
+ipcMain.on('notice:act', (e) => { if (fromShell(e)) noticeAct(); });
+ipcMain.on('notice:dismiss', (e) => { if (fromShell(e)) clearNotice(); });
+
+// Keyboard: move, resize or swap the selected screen without dragging. Moves and resizes go one grid step at a time
+// and stop at a neighbour; a swap trades places with the nearest unlocked screen in that direction.
+const NUDGE_DIRS = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+function nudgePane(id, kind, dir) {
+  const p = paneById(id);
+  const d = Object.prototype.hasOwnProperty.call(NUDGE_DIRS, dir) ? NUDGE_DIRS[dir] : null;
+  if (!p || !d || freeDrag || cfg.freeLocked || p.locked || !visiblePanes().includes(p) || !cfg.free[id]) return;
+  stopTween();
+  const cur = cfg.free[id];
+  if (kind === 'swap') {
+    const mid = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+    const [cx, cy] = mid(cur);
+    const best = visiblePanes()
+      .filter((q) => q.id !== id && !q.locked && cfg.free[q.id])
+      .map((q) => {
+        const [ox, oy] = mid(cfg.free[q.id]);
+        return { id: q.id, along: (ox - cx) * d[0] + (oy - cy) * d[1], across: Math.abs((ox - cx) * d[1]) + Math.abs((oy - cy) * d[0]) };
+      })
+      .filter((c) => c.along > 0.01)
+      .sort((a, b) => (a.along + 2 * a.across) - (b.along + 2 * b.across))[0];
+    if (best) tweenTo({ [id]: { ...cfg.free[best.id] }, [best.id]: { ...cur } }, 180);
+    return;
+  }
+  const { W, H } = wall();
+  const sx = (SNAP * 4) / W;
+  const sy = (SNAP * 4) / H;
+  const next = kind === 'resize'
+    ? { ...cur, w: clamp(cur.w + d[0] * sx, Math.min(1, MIN_FREE_W / W), 1 - cur.x), h: clamp(cur.h + d[1] * sy, Math.min(1, MIN_FREE_H / H), 1 - cur.y) }
+    : { ...cur, x: clamp(cur.x + d[0] * sx, 0, 1 - cur.w), y: clamp(cur.y + d[1] * sy, 0, 1 - cur.h) };
+  if (hitsOthers(next, id)) return;
+  cfg.free[id] = next;
+  saveConfig();
+  layoutPanes();
+}
+ipcMain.on('pane:nudge', (e, id, kind, dir) => {
+  if (!fromShell(e)) return;
+  if (focusedId !== id && paneById(id)) focusedId = id;
+  nudgePane(id, String(kind), String(dir));
+});
+
+function renameWindow(k, name) {
+  k = Number(k);
+  if (!Number.isInteger(k) || k < 0 || k >= WINDOW_COUNT) return;
+  cfg.windowNames[k] = cleanName(name) || WINDOW_NAMES[k];
   saveConfig();
   refreshTray();
   sendState();
@@ -1691,6 +1820,8 @@ function panelState() {
     displays: displayList(),
     activeWindow: cfg.active,
     windowCount: WINDOW_COUNT,
+    windowNames: cfg.windowNames,
+    notice,
     arrangeStyle: cfg.arrangeStyle,
     styles: ARRANGE_STYLES,
     paneCount: cfg.panes.length,
@@ -1816,6 +1947,9 @@ const PANEL_ACTIONS = {
   display: (id) => { if (screen.getAllDisplays().some((d) => d.id === Number(id))) setDisplay(Number(id)); },
   flag: (key, on) => { if (FLAGS.includes(key)) setFlag(key, Boolean(on)); },
   window: (k) => setWindow(Number(k)),
+  renameWindow: (k, name) => renameWindow(k, name),
+  noticeAct: () => noticeAct(),
+  noticeDismiss: () => clearNotice(),
   arrange: (style) => arrange(style),
   count: (n) => { if (Number.isFinite(Number(n))) setPaneCount(Math.round(Number(n))); },
   muteAll: () => muteAll(),
@@ -2104,7 +2238,7 @@ function refreshTray() {
     {
       label: 'Window',
       submenu: Array.from({ length: WINDOW_COUNT }, (_, k) => ({
-        label: `Window ${k + 1}`, type: 'radio', checked: cfg.active === k, accelerator: `Ctrl+Alt+${k + 1}`, click: () => setWindow(k),
+        label: `${cfg.windowNames[k]} (window ${k + 1})`, type: 'radio', checked: cfg.active === k, accelerator: `Ctrl+Alt+${k + 1}`, click: () => setWindow(k),
       })),
     },
     {
@@ -2193,7 +2327,7 @@ function testHooks() {
     get shellReady() { return shellReady; },
     get freeDrag() { return freeDrag; },
     set freeDrag(d) { freeDrag = d; },
-    views, PERF, PANEL_ACTIONS, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
+    views, PERF, PANEL_ACTIONS, nudgePane, arrange, noticeAct, get notice() { return notice; }, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
     loadConfig, saveConfig, configPath, presetLayout, ensurePlaced, placeNew, hitsOthers, overlap, visiblePanes,
     setPaneCount, setPaneHidden, setPaneLocked, popOut, dockBack, setWindow, setDisplay, toggleFavorite, addFavorite,
     moveFavorite, isFavorite, openFavorite, layoutCode, applyLayoutCode, setFit, setMuted, muteAll, normalizeInput,
@@ -2257,7 +2391,7 @@ if (!app.requestSingleInstanceLock()) {
     // would restart forever.
     if (TEST || quitting || process.uptime() < 30) return;
     logLine('restarting after the uncaught error');
-    app.relaunch();
+    app.relaunch({ args: process.argv.slice(1).filter((a) => a !== '--restarted').concat('--restarted') });
     app.exit(1);
   });
   process.on('unhandledRejection', (err) => { console.error(err); logLine(`unhandled rejection: ${err && err.stack ? err.stack : err}`); });
@@ -2268,7 +2402,17 @@ if (!app.requestSingleInstanceLock()) {
     if (details.reason === 'clean-exit') return;
     setTimeout(() => {
       if (wc.isDestroyed()) return;
-      if (wc === win?.webContents) { shellReady = false; wc.reload(); } else if (id) { const p = paneById(id); if (p) loadPane(p); }
+      if (wc === win?.webContents) { shellReady = false; wc.reload(); return; }
+      const p = id && paneById(id);
+      const entry = id && views.get(id);
+      if (!p || !entry) return;
+      // a page that crashes three times in a minute would reload forever: say so instead (reload tries again)
+      const now = Date.now();
+      entry.crashes = (entry.crashes || []).filter((t) => now - t < 60000).concat(now);
+      if (entry.crashes.length < 3) { loadPane(p); return; }
+      entry.crashes = [];
+      logLine(`screen ${id}: stopped reloading a page that keeps crashing`);
+      wc.loadFile(path.join(__dirname, 'error.html'), { query: { url: p.url, why: 'this page keeps crashing' } }).catch(() => {});
     }, 1000);
   });
   app.on('child-process-gone', (_e, details) => logLine(`helper process gone: ${details.type} (${details.reason}, exit ${details.exitCode})`));

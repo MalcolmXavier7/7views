@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('sideview', {
   muteAll: () => ipcRenderer.send('mute:all'),
   openSettings: () => ipcRenderer.send('settings:open'),
   quit: () => ipcRenderer.send('app:quit'),
+  noticeAct: () => ipcRenderer.send('notice:act'),
+  noticeDismiss: () => ipcRenderer.send('notice:dismiss'),
   openFavorite: (k) => ipcRenderer.send('fav:open', k),
   favoriteMenu: (k) => ipcRenderer.send('fav:menu', k),
   // one screen
@@ -37,4 +39,5 @@ contextBridge.exposeInMainWorld('sideview', {
   dismissPopup: (id) => ipcRenderer.send('pane:dismiss', id),
   dragStart: (id, kind, edges) => ipcRenderer.send('free:start', id, kind, edges),
   drop: (id) => ipcRenderer.send('free:drop', id),
+  nudge: (id, kind, dir) => ipcRenderer.send('pane:nudge', id, kind, dir),
 });

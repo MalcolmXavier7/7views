@@ -51,6 +51,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
 
 .brand { display: flex; align-items: center; gap: 6px; flex: none; color: var(--dim); font-weight: 600; }
 .brand span { color: var(--text); letter-spacing: 0.2px; }
+.brand { gap: 5px; }
 
 .seg { display: flex; flex: none; }
 .seg-btn {
@@ -351,6 +352,7 @@ body.glass .hdr { border-top-color: rgba(255, 255, 255, 0.14); }
 /* ---------------- narrow walls (locked to part of the screen) ---------------- */
 /* The settings bar keeps its working controls on screen; everything it drops is also in the control panel. */
 .counter .count b { font-weight: inherit; }
+.counter .count { display: flex; align-items: center; }
 @media (max-width: 1100px) {
   .favs { visibility: hidden; min-width: 0; flex: 1 1 0; }
   .brand span { display: none; }
@@ -371,4 +373,130 @@ body.glass .hdr { border-top-color: rgba(255, 255, 255, 0.14); }
 }
 @media (max-width: 520px) {
   .seg.presets, .pill.mon { display: none; }
+}
+
+/* ---------------- brand, named windows, notices, sound ---------------- */
+:root {
+  --accent-2: #8b7cf6; /* the second colour of the brand gradient */
+  --grad: linear-gradient(135deg, #4fb3a6 0%, #5f93f0 55%, #8b7cf6 100%);
+}
+.brand .mark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--grad);
+  color: #071417;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* the three windows: one for the games, one for shows, one for work */
+.seg-btn.win { display: flex; align-items: center; gap: 6px; }
+.win-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); opacity: 0.55; transition: opacity 160ms ease, box-shadow 160ms ease; }
+.win[data-k="0"] .win-dot { background: var(--live); }
+.win[data-k="1"] .win-dot { background: var(--accent-2); }
+.win[data-k="2"] .win-dot { background: var(--accent); }
+.win.on .win-dot { opacity: 1; box-shadow: 0 0 6px currentColor; }
+.win-name { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.win-num { display: none; }
+
+.notice {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  animation: pop-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.notice-text {
+  min-width: 0;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(245, 177, 61, 0.4);
+  border-radius: 12px;
+  background: rgba(245, 177, 61, 0.1);
+  color: var(--text);
+  line-height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notice-btn {
+  flex: none;
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--grad);
+  color: #071417;
+  font-weight: 700;
+  cursor: pointer;
+}
+.notice-btn:hover { filter: brightness(1.12); }
+.notice-x { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--dim); cursor: pointer; }
+.notice-x:hover { background: var(--hover); color: var(--text); }
+
+/* the one screen with sound on: three small level bars, an amber wash on its bar and an amber frame */
+.eq { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 11px; margin: 0 3px; }
+.eq i { width: 2px; height: 4px; border-radius: 1px; background: var(--live); }
+.eq.playing i { animation: level 900ms ease-in-out infinite; }
+.eq.playing i:nth-child(2) { animation-delay: -300ms; }
+.eq.playing i:nth-child(3) { animation-delay: -600ms; }
+.hdr.live { background: linear-gradient(90deg, rgba(245, 177, 61, 0.2), rgba(245, 177, 61, 0.04) 55%), var(--sheen), var(--bar-2); }
+.ibtn.muteall.sounding { color: var(--live); background: rgba(245, 177, 61, 0.12); }
+.hdr:focus { outline: none; }
+.hdr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@keyframes level { 0%, 100% { height: 3px; } 50% { height: 11px; } }
+
+/* ---------------- glass, second pass: soft pills instead of ruled boxes ---------------- */
+body.glass .topbar { border-bottom-color: transparent; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.28); }
+body.glass .seg { padding: 2px; gap: 2px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
+body.glass .seg-btn { height: 22px; margin-left: 0; border: 0; border-radius: 7px; background: none; }
+body.glass .seg > :first-child, body.glass .seg > :last-child { border-radius: 7px; }
+body.glass .seg-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); }
+body.glass .seg-btn.on {
+  background: linear-gradient(135deg, rgba(79, 179, 166, 0.34), rgba(139, 124, 246, 0.3));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+body.glass .counter .count { height: 22px; border: 0; }
+body.glass .pill { border-color: rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.05); border-radius: 9px; }
+body.glass .ibtn { border-radius: 8px; }
+body.glass .ibtn.on { background: linear-gradient(135deg, rgba(79, 179, 166, 0.26), rgba(139, 124, 246, 0.22)); color: #d9fbf5; }
+body.glass .ibtn.muteall.sounding { background: rgba(245, 177, 61, 0.16); color: var(--live); }
+body.glass .hdr { background: var(--sheen), var(--bar-2); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+body.glass .hdr.focused { box-shadow: inset 0 2px 0 var(--accent), 0 1px 0 rgba(0, 0, 0, 0.35); }
+body.glass .hdr.focused .grip { color: var(--accent); }
+body.glass .hdr.live { background: linear-gradient(90deg, rgba(245, 177, 61, 0.24), rgba(245, 177, 61, 0.05) 55%), var(--sheen), var(--bar-2); box-shadow: inset 0 -2px 0 var(--live); }
+body.glass .hdr.focused.live { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--live); }
+body.glass .hdr.moving { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(79, 179, 166, 0.5); }
+body.glass .fav { border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); }
+body.glass .fav:hover { background: rgba(239, 230, 207, 0.14); border-color: rgba(239, 230, 207, 0.4); transform: translateY(-1px); }
+body.glass .chip { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+body.glass .toptab { background: rgba(26, 33, 41, 0.9); }
+body.glass .game.live b::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--live); vertical-align: 1px; animation: pulse 1.6s ease-in-out infinite; }
+
+@media (max-width: 1100px) {
+  .win-name { display: none; }
+  .win-num { display: inline; }
+  .notice { flex: 1 1 0; }
+}
+@media (max-width: 760px) {
+  .win-dot { display: none; }
+  .notice-text { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eq.playing i { animation: none !important; height: 8px; }
+}
+
+/* a notice needs room for its words: on all but very wide walls it borrows the layout controls' space while it shows */
+@media (max-width: 1700px) {
+  .topbar.noticing .pill.mon, .topbar.noticing .counter, .topbar.noticing .seg.presets { display: none; }
+}
+@media (max-width: 760px) {
+  .topbar.noticing .notice-text { display: block; }
+  .topbar.noticing .tools .ibtn[data-key] { display: none; }
 }

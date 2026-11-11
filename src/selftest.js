@@ -326,6 +326,59 @@ module.exports = async function selftest(h) {
     h.cfg.arrangeStyle = 'center';
     return 'preset wins over lock all';
   });
+  await test('Locks', 'Undo puts back the layout and locks a preset replaced', async () => {
+    unlockAll();
+    grid();
+    const [a] = ids();
+    const before = JSON.stringify(h.cfg.free);
+    const style = h.cfg.arrangeStyle;
+    h.setPaneLocked(a, true);
+    h.arrange('row');
+    assert(h.notice && h.notice.action === 'undoArrange', 'no Undo was offered');
+    await sleep(400);
+    assert(JSON.stringify(h.cfg.free) !== before, 'the preset did not run');
+    h.noticeAct();
+    const ok = await waitFor(() => h.cfg.panes.find((p) => p.id === a).locked, 3000);
+    assert(ok, 'the lock did not come back');
+    const moved = Object.keys(JSON.parse(before)).filter((id) => Math.abs(h.cfg.free[id].x - JSON.parse(before)[id].x) > 0.001);
+    assert(!moved.length && h.cfg.arrangeStyle === style && !h.notice, `not restored: ${moved.join(', ')} ${h.cfg.arrangeStyle}`);
+    unlockAll();
+    h.arrange('row');
+    assert(!h.notice, 'Undo offered though nothing was locked');
+    h.stopTween();
+    return 'layout, preset and lock restored; no Undo when nothing was locked';
+  });
+  await test('Keyboard', 'Arrow keys move, resize and swap the selected screen', async () => {
+    unlockAll();
+    grid();
+    const [a, b] = ids();
+    const fa = { ...h.cfg.free[a] };
+    const fb = { ...h.cfg.free[b] };
+    h.nudgePane(a, 'move', 'right');
+    assert(Math.abs(h.cfg.free[a].x - fa.x) < 1e-6, 'moved into its neighbour');
+    h.nudgePane(a, 'resize', 'left');
+    assert(h.cfg.free[a].w < fa.w, 'did not shrink');
+    h.nudgePane(a, 'move', 'right');
+    assert(h.cfg.free[a].x > fa.x && !h.hitsOthers(h.cfg.free[a], a), 'did not move into the freed space');
+    h.cfg.free[a] = fa;
+    h.setPaneLocked(a, true);
+    h.nudgePane(a, 'resize', 'left');
+    assert(h.cfg.free[a].w === fa.w, 'a locked screen was resized');
+    h.setPaneLocked(a, false);
+    h.nudgePane(a, 'swap', 'right');
+    await sleep(350);
+    assert(Math.abs(h.cfg.free[a].x - fb.x) < 0.002 && Math.abs(h.cfg.free[b].x - fa.x) < 0.002, 'did not swap with the screen on its right');
+    for (const junk of [undefined, null, {}, 'constructor', 5]) h.nudgePane(a, junk, junk);
+    return 'stops at neighbours, respects locks, swaps';
+  });
+  await test('Windows', 'Windows can be named', () => {
+    h.PANEL_ACTIONS.renameWindow(0, '  Game night and more  ');
+    assert(h.cfg.windowNames[0] === 'Game night a', `name: "${h.cfg.windowNames[0]}"`);
+    h.PANEL_ACTIONS.renameWindow(0, '');
+    h.PANEL_ACTIONS.renameWindow(7, 'x');
+    assert(h.cfg.windowNames.join() === 'Sports,TV,Work', h.cfg.windowNames.join());
+    return h.cfg.windowNames.join(' / ');
+  });
 
   // ================= picture-in-picture =================
   await test('Picture-in-picture', 'Pop out and back', async () => {
@@ -803,6 +856,33 @@ module.exports = async function selftest(h) {
     perf.memoryMB = { twoScreens: two, sixScreens: six, perExtraScreen: round((six - two) / 4, 0) };
     return `${two} MB with 2, ${six} MB with 6 (about ${perf.memoryMB.perExtraScreen} MB per screen, test pages)`;
   });
+
+  // SV_TEST_SHOT=bars.png saves a picture of the bars (settings bar, screen bars, frames) with a bit of everything
+  // showing: a favorite, a screen with sound on, a locked screen and a notice. The pages themselves aren't in it.
+  if (process.env.SV_TEST_SHOT) {
+    unlockAll();
+    for (let k = 0; k < 3; k++) h.PANEL_ACTIONS.renameWindow(k, '');
+    h.setWindow(0);
+    S(6);
+    h.cfg.favorites = [{ url: 'https://example.com/', title: 'Example', icon: '' }, { url: 'https://example.org/', title: 'Scores', icon: '' }];
+    h.setFlag('ticker', false);
+    const [a, b] = ids();
+    h.setMuted(a, false);
+    h.setPaneLocked(b, true);
+    h.arrange('middle');
+    await sleep(700);
+    // a hidden window repaints lazily: ask for a frame, then take the next one
+    const shoot = async (file) => {
+      h.sendState();
+      await sleep(400);
+      await h.win.webContents.capturePage();
+      await sleep(400);
+      fs.writeFileSync(file, (await h.win.webContents.capturePage()).toPNG());
+    };
+    await shoot(process.env.SV_TEST_SHOT);
+    h.setFlag('glass', false);
+    await shoot(process.env.SV_TEST_SHOT.replace(/\.png$/i, '-plain.png'));
+  }
 
   // ================= done =================
   server.close();

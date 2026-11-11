@@ -106,15 +106,16 @@ const tab = button('toptab', ICON.down, 'Show the settings bar (Ctrl+Alt+F)', ()
 wall.append(bar, tab);
 
 const brand = el('div', 'brand');
-brand.innerHTML = `${ICON.grip}<span>7 Views</span>`;
+brand.innerHTML = `${ICON.grip}<b class="mark">7</b><span>Views</span>`;
 brand.title = 'Drag the bar to move 7 Views to another monitor';
 
 const winsw = el('div', 'seg winsw');
 winsw.setAttribute('role', 'group');
 winsw.setAttribute('aria-label', 'Window');
 const winBtns = [0, 1, 2].map((k) => {
-  const b = button('seg-btn', '', `Window ${k + 1} (Ctrl+Alt+${k + 1})`, () => sv.setWindow(k));
-  b.textContent = String(k + 1);
+  const b = button('seg-btn win', '', `Window ${k + 1} (Ctrl+Alt+${k + 1})`, () => sv.setWindow(k));
+  b.dataset.k = String(k);
+  b.append(el('i', 'win-dot'), el('span', 'win-name'), el('span', 'win-num', { textContent: String(k + 1) }));
   winsw.append(b);
   return b;
 });
@@ -164,11 +165,31 @@ const toggles = [
   b.dataset.onTip = onTip;
   return b;
 });
+const muteAllBtn = button('ibtn muteall', ICON.muted, 'Mute every screen (Ctrl+Alt+M)', () => sv.muteAll());
+
+// One short line from main (a preset dropped your locks, 7 Views restarted...), with at most one button.
+const noticeEl = el('div', 'notice', { hidden: true });
+noticeEl.setAttribute('role', 'status');
+const noticeText = el('span', 'notice-text');
+const noticeBtn = button('notice-btn', '', '', () => sv.noticeAct());
+noticeEl.append(noticeText, noticeBtn, button('notice-x', ICON.x, 'Dismiss', () => sv.noticeDismiss()));
+function renderNotice() {
+  const n = S.notice;
+  noticeEl.hidden = !n;
+  bar.classList.toggle('noticing', Boolean(n));
+  favs.hidden = Boolean(n);
+  if (!n) return;
+  noticeText.textContent = n.text;
+  noticeText.title = n.text;
+  noticeBtn.hidden = !n.label;
+  noticeBtn.textContent = n.label || '';
+}
+
 const tools = el('div', 'tools');
 tools.append(
   ...toggles,
   el('span', 'sep'),
-  button('ibtn', ICON.muted, 'Mute every screen (Ctrl+Alt+M)', () => sv.muteAll()),
+  muteAllBtn,
   button('ibtn', ICON.gear, 'Control panel: every setting in one place (Ctrl+Alt+P)', () => sv.openSettings()),
   el('span', 'sep'),
   button('ibtn', ICON.up, 'Hide this bar (Ctrl+Alt+F)', () => sv.setFlag('topBar', false)),
@@ -176,7 +197,7 @@ tools.append(
   button('ibtn quit', ICON.x, 'Quit 7 Views', () => sv.quit()),
 );
 
-bar.append(brand, winsw, monBtn, presets, counter, favs, tools);
+bar.append(brand, winsw, monBtn, presets, counter, favs, noticeEl, tools);
 
 // Drag the bar (anywhere that isn't a button) to carry the whole wall to another monitor.
 bar.addEventListener('pointerdown', (e) => {
@@ -211,6 +232,7 @@ function renderFavorites() {
     b.append(el('span', 'fav-name', { textContent: f.title || hostOf(f.url) }));
     b.addEventListener('click', () => sv.openFavorite(k));
     b.addEventListener('contextmenu', (e) => { e.preventDefault(); sv.favoriteMenu(k); });
+    b.addEventListener('keydown', (e) => { if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); sv.favoriteMenu(k); } });
     b.addEventListener('dragstart', (e) => {
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('text/uri-list', f.url);
@@ -225,7 +247,20 @@ function renderBar() {
   tab.hidden = S.topBar;
   bar.style.height = `${S.toolbarH}px`;
   tab.style.height = `${S.tabH}px`;
-  winBtns.forEach((b, k) => { b.classList.toggle('on', k === S.activeWindow); b.setAttribute('aria-pressed', String(k === S.activeWindow)); });
+  winBtns.forEach((b, k) => {
+    const name = (S.windowNames && S.windowNames[k]) || `Window ${k + 1}`;
+    b.classList.toggle('on', k === S.activeWindow);
+    b.setAttribute('aria-pressed', String(k === S.activeWindow));
+    b.querySelector('.win-name').textContent = name;
+    b.title = `${name}: window ${k + 1} (Ctrl+Alt+${k + 1}). Each window keeps its own screens and layout.`;
+    b.setAttribute('aria-label', b.title);
+  });
+  renderNotice();
+  const sounding = S.panes.some((p) => !p.muted);
+  muteAllBtn.classList.toggle('sounding', sounding);
+  muteAllBtn.innerHTML = sounding ? ICON.sound : ICON.muted;
+  muteAllBtn.title = sounding ? 'A screen has sound on. Click to mute every screen (Ctrl+Alt+M)' : 'Every screen is muted (Ctrl+Alt+M)';
+  muteAllBtn.setAttribute('aria-label', muteAllBtn.title);
   const cur = S.displays.find((d) => d.current) || S.displays[0];
   monBtn.innerHTML = `${ICON.monitor}<span>${cur ? `${cur.index}: ${cur.name}` : 'Monitor'}</span>${ICON.caret}`;
   const locked = S.freeLocked || S.anyLocked;
@@ -366,7 +401,15 @@ function build(id) {
     trackDrag(h.frame, e, { onStart: () => sv.dragStart(id, 'resize', edges), onEnd: () => sv.drop(id) });
   });
 
-  h.el = el('div', 'hdr');
+  h.el = el('div', 'hdr', { tabIndex: 0 });
+  h.el.setAttribute('role', 'group');
+  // arrows move the screen a step, Shift+arrows resize it, Ctrl+arrows swap it with the neighbour that way
+  h.el.addEventListener('keydown', (e) => {
+    const dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[e.key];
+    if (!dir || e.target !== h.el || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    sv.nudge(id, e.ctrlKey ? 'swap' : e.shiftKey ? 'resize' : 'move', dir);
+  });
   const grip = el('span', 'grip', { innerHTML: ICON.grip });
   h.back = button('btn back', ICON.back, 'Back', () => sv.back(id));
   h.forward = button('btn forward', ICON.forward, 'Forward', () => sv.forward(id));
@@ -374,6 +417,7 @@ function build(id) {
   h.input = el('input', 'addr-input', { type: 'text', spellcheck: false, hidden: true });
   h.input.setAttribute('aria-label', 'Address');
   h.dot = el('span', 'dot', { hidden: true, title: 'Playing sound (muted)' });
+  h.eq = el('span', 'eq', { hidden: true, title: 'Sound is on for this screen', innerHTML: '<i></i><i></i><i></i>' });
   h.mute = button('btn mute', '', '', () => sv.setMuted(id, !h.muted));
   h.reload = button('btn reload', ICON.reload, 'Reload', () => sv.reload(id));
   // off -> whole video fills the box -> video fills edge to edge (crops) -> off
@@ -382,7 +426,7 @@ function build(id) {
   h.pip = button('btn pipb', ICON.pip, 'Picture-in-picture: float this screen in its own small window', () => sv.popOut(id));
   h.lock = button('btn plock', '', '', () => sv.lockPane(id, !h.locked));
   h.eye = button('btn eye', ICON.eye, 'Turn this screen off', () => sv.hidePane(id, true));
-  h.el.append(grip, h.back, h.forward, h.addr, h.input, h.dot, h.mute, h.reload, h.fitBtn, h.fav, h.pip, h.lock, h.eye);
+  h.el.append(grip, h.back, h.forward, h.addr, h.input, h.dot, h.eq, h.mute, h.reload, h.fitBtn, h.fav, h.pip, h.lock, h.eye);
 
   // red bar under the header when a popup was blocked
   h.block = el('div', 'blockbar', { hidden: true });
@@ -461,6 +505,9 @@ function renderScreen(p, inPlace) {
   h.addr.title = p.url ? `${p.title || hostOf(p.url)}\n${p.url}\nClick to change the link` : 'Type or paste a link';
 
   h.dot.hidden = !(p.audible && p.muted);
+  h.eq.hidden = p.muted;
+  h.eq.classList.toggle('playing', p.audible && !p.muted);
+  h.el.setAttribute('aria-label', `${p.label}${p.muted ? '' : ', sound on'}${p.locked ? ', locked' : ''}. Arrow keys move it, Shift plus arrows resize it, Control plus arrows swap it with a neighbour.`);
   h.mute.innerHTML = p.muted ? ICON.muted : ICON.sound;
   h.mute.title = p.muted ? 'Unmute' : 'Mute';
   h.mute.setAttribute('aria-label', h.mute.title);

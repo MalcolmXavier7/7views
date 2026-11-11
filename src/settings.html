@@ -23,6 +23,7 @@
       <button type="button" id="showhide" class="btn"></button>
       <button type="button" id="quit" class="btn danger">Quit</button>
     </div>
+    <div class="notice" id="notice" role="status" hidden><span id="notice-text"></span><button type="button" class="btn small primary" id="notice-act"></button><button type="button" class="btn small" id="notice-x">Dismiss</button></div>
   </header>
 
   <main class="grid">
@@ -35,8 +36,10 @@
     <section class="card" id="layout">
       <h2>Layout</h2>
       <div class="field"><span class="label">Window</span><div class="seg" id="windows"></div></div>
+      <div class="field"><span class="label">Names</span><div class="names" id="window-names"></div></div>
+      <p class="note">Each window keeps its own screens and layout: one for the games, one for shows, one for work.</p>
       <div class="field"><span class="label">Arrange</span><div class="seg" id="presets"></div></div>
-      <p class="note" id="presets-note" hidden>Screens are locked. Picking a preset unlocks them.</p>
+      <p class="note" id="presets-note" hidden>Screens are locked. Picking a preset unlocks them; Undo puts them back.</p>
       <div class="field"><span class="label">Screens</span>
         <div class="stepper"><button type="button" id="fewer" aria-label="One screen fewer">−</button><output id="count"></output><button type="button" id="more" aria-label="One more screen">+</button></div>
       </div>
@@ -164,6 +167,10 @@
         <dt>Ctrl+Alt+N</dt><dd>Add a screen</dd>
         <dt>Ctrl+Alt+M</dt><dd>Mute every screen</dd>
         <dt>Ctrl+Alt+1/2/3</dt><dd>Switch window</dd>
+        <dt>Ctrl+Alt+K</dt><dd>Lock to part of the screen</dd>
+        <dt>Arrows</dt><dd>Move the selected screen (click its bar first)</dd>
+        <dt>Shift+Arrows</dt><dd>Resize the selected screen</dd>
+        <dt>Ctrl+Arrows</dt><dd>Swap it with the neighbour that way</dd>
       </dl>
     </section>
   </main>

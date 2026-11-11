@@ -322,3 +322,9 @@ table.screens { width: 100%; border-collapse: collapse; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
 }
+
+/* ---------------- notices and window names ---------------- */
+.notice { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid rgba(245, 177, 61, 0.4); border-radius: 10px; background: rgba(245, 177, 61, 0.1); }
+.notice span { flex: 1; min-width: 0; }
+.names { display: flex; gap: 6px; }
+.names input { width: 86px; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.25); }

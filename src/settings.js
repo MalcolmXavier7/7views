@@ -76,11 +76,19 @@ function renderTop() {
   $('meter').classList.toggle('heavy', (r.totalMB || 0) > 6144);
   const cur = S.displays.find((d) => d.current);
   $('status').textContent = S.visible
-    ? `Showing on ${cur ? `${cur.index}: ${cur.name}` : 'a monitor'} · Window ${S.activeWindow + 1} · ${S.paneCount} screens`
+    ? `Showing on ${cur ? `${cur.index}: ${cur.name}` : 'a monitor'} · ${(S.windowNames && S.windowNames[S.activeWindow]) || `Window ${S.activeWindow + 1}`} · ${S.paneCount} screens`
     : 'Hidden. Ctrl+Alt+S or Show brings it back.';
   $('showhide').textContent = S.visible ? 'Hide 7 Views' : 'Show 7 Views';
+  $('notice').hidden = !S.notice;
+  if (S.notice) {
+    $('notice-text').textContent = S.notice.text;
+    $('notice-act').hidden = !S.notice.label;
+    $('notice-act').textContent = S.notice.label || '';
+  }
   $('showhide').classList.toggle('primary', !S.visible);
 }
+$('notice-act').addEventListener('click', () => api.act('noticeAct'));
+$('notice-x').addEventListener('click', () => api.act('noticeDismiss'));
 $('showhide').addEventListener('click', () => api.act(S.visible ? 'hide' : 'show'));
 $('quit').addEventListener('click', () => { if (confirm('Quit 7 Views?')) api.act('quit'); });
 
@@ -109,7 +117,19 @@ function renderMonitors() {
 // ---------------- layout ----------------
 
 function renderLayout() {
-  segmented($('windows'), Array.from({ length: S.windowCount }, (_, k) => [k, `${k + 1}`]), S.activeWindow, (k) => api.act('window', k));
+  const names = Array.from({ length: S.windowCount }, (_, k) => (S.windowNames && S.windowNames[k]) || `${k + 1}`);
+  segmented($('windows'), names.map((n, k) => [k, n]), S.activeWindow, (k) => api.act('window', k));
+  const box = $('window-names');
+  if (!box.children.length) {
+    names.forEach((_, k) => {
+      const input = el('input', '', { type: 'text', maxLength: 12, spellcheck: false });
+      input.setAttribute('aria-label', `Name of window ${k + 1}`);
+      input.addEventListener('change', () => api.act('renameWindow', k, input.value));
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+      box.append(input);
+    });
+  }
+  [...box.children].forEach((input, k) => { if (!editing(input)) input.value = names[k]; });
   const locked = S.flags.freeLocked || S.anyLocked;
   segmented($('presets'), S.styles.map((s) => [s, STYLE_LABEL[s] || s]), S.arrangeStyle, (s) => api.act('arrange', s));
   $('presets-note').hidden = !locked;
