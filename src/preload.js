@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('sideview', {
   hide: () => ipcRenderer.send('wall:hide'),
   monitorMenu: () => ipcRenderer.send('monitor:menu'),
   dockMenu: () => ipcRenderer.send('dock:menu'),
+  layoutsMenu: () => ipcRenderer.send('layouts:menu'),
   setCount: (n) => ipcRenderer.send('panes:count', n),
   setWindow: (k) => ipcRenderer.send('window:set', k),
   arrange: (style) => ipcRenderer.send('free:arrange', style),
@@ -40,5 +41,6 @@ contextBridge.exposeInMainWorld('sideview', {
   dismissPopup: (id) => ipcRenderer.send('pane:dismiss', id),
   dragStart: (id, kind, edges) => ipcRenderer.send('free:start', id, kind, edges),
   drop: (id) => ipcRenderer.send('free:drop', id),
+  spotlight: (id) => ipcRenderer.send('pane:spotlight', id),
   nudge: (id, kind, dir) => ipcRenderer.send('pane:nudge', id, kind, dir),
 });

@@ -141,11 +141,28 @@ function renderLayout() {
   segmented($('dock-quick'), [['whole', 'Whole screen'], ['left', 'Left half'], ['right', 'Right half']], quick,
     (v) => (v === 'whole' ? api.act('flag', 'dockOn', false) : api.act('dockTo', v, 0.5)));
   $('clear-recent').disabled = !S.recentCount;
+  const list = $('saved-list');
+  const key = JSON.stringify(S.savedLayouts);
+  if (list.dataset.key !== key) {
+    list.dataset.key = key;
+    list.textContent = '';
+    if (!S.savedLayouts.length) list.append(el('li', 'empty', { textContent: 'None yet. Arrange your screens, name it, Save.' }));
+    S.savedLayouts.forEach((name, k) => {
+      const li = el('li');
+      li.append(el('span', 'saved-name', { textContent: name }), btn('Apply', 'btn small primary', () => api.act('applyLayout', k)), btn('Delete', 'btn small', () => api.act('deleteLayout', k)));
+      list.append(li);
+    });
+  }
   segmented($('dock-edge'), S.dockEdges.map((e) => [e, e[0].toUpperCase() + e.slice(1)]), S.dockEdge, (e) => api.act('dock', e));
   const sizes = [0.25, 0.33, 0.4, 0.5, 0.6, 0.67, 0.75];
   if (!sizes.some((z) => Math.abs(z - S.dockSize) < 0.005)) sizes.push(S.dockSize);
   fillSelect($('dock-size'), sizes.sort((a, b) => a - b).map((z) => [z, `${Math.round(z * 100)}% of the screen`]), sizes.find((z) => Math.abs(z - S.dockSize) < 0.005));
 }
+$('save-layout').addEventListener('submit', (e) => {
+  e.preventDefault();
+  api.act('saveLayout', $('layout-name').value);
+  $('layout-name').value = '';
+});
 $('clear-recent').addEventListener('click', () => api.act('clearRecent'));
 $('dock-on').addEventListener('change', (e) => api.act('flag', 'dockOn', e.target.checked));
 $('dock-size').addEventListener('change', (e) => api.act('dock', null, Number(e.target.value)));

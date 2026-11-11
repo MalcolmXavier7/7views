@@ -44,6 +44,10 @@
         <div class="stepper"><button type="button" id="fewer" aria-label="One screen fewer">−</button><output id="count"></output><button type="button" id="more" aria-label="One more screen">+</button></div>
       </div>
       <label class="switch-row"><span>Lock to part of the screen<small>Your other apps' maximized windows fill the rest</small></span><input type="checkbox" role="switch" id="dock-on"></label>
+      <div class="field"><span class="label">Saved layouts</span></div>
+      <ul class="saved" id="saved-list"></ul>
+      <form class="row-form" id="save-layout"><input type="text" id="layout-name" maxlength="24" placeholder="Name this layout" aria-label="Name for the layout" spellcheck="false"><button type="submit" class="btn small primary">Save</button></form>
+      <p class="note">Where the screens sit, never what's on them. Ctrl+Alt+L on the wall opens the same list.</p>
       <div class="field"><span class="label">Quick</span><div class="seg" id="dock-quick"></div></div>
       <div class="field"><span class="label">Edge</span><div class="seg" id="dock-edge"></div></div>
       <div class="field"><label class="label" for="dock-size">Size</label><select id="dock-size"></select></div>
@@ -170,6 +174,8 @@
         <dt>Ctrl+Alt+M</dt><dd>Mute every screen</dd>
         <dt>Ctrl+Alt+1/2/3</dt><dd>Switch window</dd>
         <dt>Ctrl+Alt+K</dt><dd>Lock to part of the screen</dd>
+        <dt>Ctrl+Alt+Z</dt><dd>Spotlight the selected screen (also: double-click its bar)</dd>
+        <dt>Ctrl+Alt+L</dt><dd>Saved layouts menu</dd>
         <dt>Arrows</dt><dd>Move the selected screen (click its bar first)</dd>
         <dt>Shift+Arrows</dt><dd>Resize the selected screen</dd>
         <dt>Ctrl+Arrows</dt><dd>Swap it with the neighbour that way</dd>

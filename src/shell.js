@@ -31,6 +31,9 @@ const ICON = {
   pip: svg('<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><rect x="8" y="8" width="5" height="4" rx="0.6" fill="currentColor" stroke="none"/>'),
   // favorites: two crossed bones
   bones: '<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><circle cx="4.5" cy="2.6" r="1.55"/><circle cx="2.6" cy="4.5" r="1.55"/><circle cx="13.4" cy="11.5" r="1.55"/><circle cx="11.5" cy="13.4" r="1.55"/><circle cx="11.5" cy="2.6" r="1.55"/><circle cx="13.4" cy="4.5" r="1.55"/><circle cx="2.6" cy="11.5" r="1.55"/><circle cx="4.5" cy="13.4" r="1.55"/></svg>',
+  bookmark: svg('<path d="M4 2.5h8v11l-4-2.8-4 2.8z"/>'),
+  expand: svg('<path d="M6 2.5H2.5V6M10 2.5h3.5V6M6 13.5H2.5V10M10 13.5h3.5V10"/>'),
+  collapse: svg('<path d="M2.5 6H6V2.5M13.5 6H10V2.5M2.5 10H6v3.5M13.5 10H10v3.5"/>'),
   taskbar: svg('<rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M1.5 11h13M4 12.3h2"/>'),
   dock: svg('<rect x="1.5" y="2.5" width="13" height="11" rx="1"/><rect x="8.5" y="2.5" width="6" height="11" rx="0.5" fill="currentColor" fill-opacity="0.45" stroke="none"/><path d="M8.5 2.5v11"/>'),
   pin: svg('<path d="M9.5 2l4.5 4.5-2 1-2.5 2.5-.5 3L6 10l-3.5 3.5M6 10L3 7l3-.5L8.5 4l1-2"/>'),
@@ -160,6 +163,7 @@ const toggles = [
   return b;
 });
 // Lock 7 Views to the left or right (or top, bottom) of the monitor; other apps get the rest.
+const layoutsBtn = button('ibtn', ICON.bookmark, 'Saved layouts: pick one, or save this one (Ctrl+Alt+L)', () => sv.layoutsMenu());
 const dockBtn = button('ibtn dockb', ICON.dock, '', () => sv.dockMenu());
 // Float the selected screen in its own small window above everything.
 const pipBtn = button('ibtn', ICON.pip, '', () => { if (S.focusedId) sv.popOut(S.focusedId); });
@@ -186,6 +190,7 @@ function renderNotice() {
 const tools = el('div', 'tools');
 tools.append(
   ...toggles,
+  layoutsBtn,
   dockBtn,
   pipBtn,
   el('span', 'sep'),
@@ -393,7 +398,7 @@ sv.onStills((shots) => {
   if (Object.keys(stills).length) requestAnimationFrame(() => requestAnimationFrame(() => sv.stillsShown()));
 });
 
-const canMove = (id) => S && !S.freeLocked && !screens.get(id)?.locked;
+const canMove = (id) => S && !S.freeLocked && !S.spotlightId && !screens.get(id)?.locked;
 
 function build(id) {
   const h = { id, locked: false, fit: 'off', muted: true, url: '' };
@@ -436,10 +441,11 @@ function build(id) {
   // off -> whole video fills the box -> video fills edge to edge (crops) -> off
   h.fitBtn = button('btn fit', ICON.fit, '', () => sv.setFit(id, NEXT_FIT[h.fit] || 'off'));
   h.fav = button('btn fav', ICON.bones, '', () => sv.toggleFavorite(id));
+  h.spot = button('btn spotb', ICON.expand, '', () => sv.spotlight(id));
   h.pip = button('btn pipb', ICON.pip, 'Picture-in-picture: float this screen in its own small window', () => sv.popOut(id));
   h.lock = button('btn plock', '', '', () => sv.lockPane(id, !h.locked));
   h.eye = button('btn eye', ICON.eye, 'Turn this screen off', () => sv.hidePane(id, true));
-  h.el.append(grip, h.back, h.forward, h.addr, h.input, h.dot, h.eq, h.mute, h.reload, h.fitBtn, h.fav, h.pip, h.lock, h.eye);
+  h.el.append(grip, h.back, h.forward, h.addr, h.input, h.dot, h.eq, h.mute, h.reload, h.fitBtn, h.fav, h.spot, h.pip, h.lock, h.eye);
 
   // red bar under the header when a popup was blocked
   h.block = el('div', 'blockbar', { hidden: true });
@@ -477,6 +483,8 @@ function build(id) {
     trackDrag(h.el, e, { onStart: () => sv.dragStart(id, 'move'), onEnd: () => sv.drop(id) });
   });
 
+  h.el.addEventListener('dblclick', (e) => { if (!e.target.closest('.btn, .addr-input, .addr')) sv.spotlight(id); });
+
   // drop a link or a favorite on a bar to load it there
   h.el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; h.el.classList.add('drop-target'); });
   h.el.addEventListener('dragleave', () => h.el.classList.remove('drop-target'));
@@ -493,7 +501,7 @@ function build(id) {
 
 function renderScreen(p, inPlace) {
   const h = screens.get(p.id) || build(p.id);
-  const away = p.hidden || p.pip; // turned off, or floating in its own window
+  const away = p.hidden || p.pip || Boolean(S.spotlightId && S.spotlightId !== p.id); // turned off, floating, or behind the spotlight
   Object.assign(h, { url: p.url, muted: p.muted, locked: p.locked, fit: p.fit });
   const r = { left: p.left, top: p.top, width: p.width, height: p.height };
   rects.set(p.id, r);
@@ -543,6 +551,12 @@ function renderScreen(p, inPlace) {
   h.fav.setAttribute('aria-pressed', String(p.favorite));
 
   h.pip.hidden = inPlace <= 1;
+  const spot = S.spotlightId === p.id;
+  h.spot.hidden = inPlace <= 1;
+  h.spot.innerHTML = spot ? ICON.collapse : ICON.expand;
+  h.spot.classList.toggle('on', spot);
+  h.spot.title = spot ? 'Back to every screen (Ctrl+Alt+Z, or double-click the bar)' : 'Spotlight: fill the whole wall with this screen (Ctrl+Alt+Z, or double-click the bar)';
+  h.spot.setAttribute('aria-label', h.spot.title);
   h.eye.hidden = inPlace <= 1;
 
   h.lock.innerHTML = p.locked ? ICON.lock : ICON.unlock;

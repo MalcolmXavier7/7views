@@ -328,3 +328,11 @@ table.screens { width: 100%; border-collapse: collapse; }
 .notice span { flex: 1; min-width: 0; }
 .names { display: flex; gap: 6px; }
 .names input { width: 86px; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.25); }
+
+/* ---------------- saved layouts ---------------- */
+.saved { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.saved li { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.03); }
+.saved li.empty { color: var(--dim); border-style: dashed; }
+.saved-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#save-layout { display: flex; gap: 6px; }
+#save-layout input { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.25); }

@@ -128,6 +128,7 @@ function defaultConfig() {
     discordInvite: '', // the 7 Views .1107 server's invite link, for the control panel's "Open Discord"
     siteZoom: {}, // page zoom remembered per website: { 'pluto.tv': 0.6 }
     windowNames: [...WINDOW_NAMES], // what the three windows are called on the bar
+    savedLayouts: [], // named layouts: [{ name, code }], code is a layout code (positions only, never sites)
     recent: [], // the last few sites opened, newest first, one per website: [{ url, title }] (for the home page)
     panes: [1, 2, 3, 4].map((n) => ({ id: `p${n}`, url: '', zoom: 0.4 })),
   };
@@ -135,7 +136,8 @@ function defaultConfig() {
 
 const WINDOW_NAMES = ['Sports', 'TV', 'Work'];
 const MAX_RECENT = 8;
-const cleanName = (x) => String(typeof x === 'string' ? x : '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 12);
+const cleanName = (x, max = 12) => String(typeof x === 'string' ? x : '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, max);
+const MAX_SAVED_LAYOUTS = 8;
 let startupNote = ''; // something loadConfig had to change that the owner should hear about once
 
 function cleanFree(obj) {
@@ -248,6 +250,10 @@ function loadConfig() {
     .map(([site, z]) => [site, clamp(Number(z), ZOOM_MIN, ZOOM_MAX)]));
   if (!LEAGUES.some(([, id]) => id === out.league)) out.league = base.league;
   out.recent = cleanFavorites((Array.isArray(saved.recent) ? saved.recent : []).map((r) => ({ ...r, icon: '' }))).slice(0, MAX_RECENT).map(({ url, title }) => ({ url, title }));
+  out.savedLayouts = (Array.isArray(saved.savedLayouts) ? saved.savedLayouts : [])
+    .filter((l) => l && typeof l.code === 'string' && /^SV1-[A-Za-z0-9_-]{4,2000}$/.test(l.code))
+    .map((l) => ({ name: cleanName(l.name, 24) || 'Layout', code: l.code }))
+    .slice(0, MAX_SAVED_LAYOUTS);
   out.windowNames = WINDOW_NAMES.map((d, k) => cleanName(Array.isArray(saved.windowNames) ? saved.windowNames[k] : '') || d);
   if (Array.isArray(saved.panes) && saved.panes.length > MAX_PANES) startupNote = `This setup had ${saved.panes.length} screens; 7 Views shows up to ${MAX_PANES}, so the extra ones were dropped.`;
 
@@ -750,6 +756,7 @@ ipcMain.on('stills:shown', (e) => { if (fromShell(e) && stillsShown) { stillsSho
 // Every turned-on screen's rectangle (header included), in pixels inside the window.
 function computeLayout() {
   const { W, H, top } = wall();
+  if (spotlightId && visiblePanes().some((p) => p.id === spotlightId)) return [{ id: spotlightId, left: 0, top, width: W, height: H }];
   return visiblePanes().map((p) => {
     const f = cfg.free[p.id] || { x: 0, y: 0, w: 0.3, h: 0.3 };
     return { id: p.id, left: Math.round(f.x * W), top: top + Math.round(f.y * H), width: Math.round(f.w * W), height: Math.round(f.h * H) };
@@ -807,8 +814,9 @@ function setFit(id, mode) {
 
 function layoutPanes() {
   if (!win || win.isDestroyed()) return;
+  if (spotlightId && !visiblePanes().some((p) => p.id === spotlightId)) spotlightId = ''; // it was turned off or floated away
   for (const [id, e] of views) {
-    if (!e.pip && !visiblePanes().some((p) => p.id === id)) e.view.setVisible(false); // off, or in another window
+    if (!e.pip && (!visiblePanes().some((p) => p.id === id) || (spotlightId && id !== spotlightId))) e.view.setVisible(false); // off, in another window, or behind the spotlight
   }
   for (const e of views.values()) if (e.pip) e.layoutPip();
   // room around the page for the shell's header and resize frame. With boxes off there's none, so the pages
@@ -872,6 +880,7 @@ function sendState() {
     topBar: cfg.topBar,
     activeWindow: cfg.active,
     windowNames: cfg.windowNames,
+    spotlightId,
     notice,
     displays: displayList(),
     paneCount: cfg.panes.length,
@@ -1259,6 +1268,7 @@ function setWindow(k) {
   k = clamp(Math.round(Number(k)), 0, WINDOW_COUNT - 1);
   if (!win || k === cfg.active) return;
   clearNotice();
+  spotlightId = '';
   stopTween();
   for (const p of cfg.panes) dockBack(p.id); // popped-out screens belong to the window we're leaving
   stashWindow();
@@ -1314,6 +1324,60 @@ function setDock(edge, size) {
   refreshTray();
   sendState();
 }
+
+// ---------- spotlight ----------
+// One screen fills the whole wall (the others keep playing behind it, muted or not as they were) until it's
+// toggled off. Nothing about the arrangement changes, so leaving brings every screen back exactly where it was.
+let spotlightId = '';
+function setSpotlight(id) {
+  if (spotlightId) { spotlightId = ''; layoutPanes(); return; }
+  const p = paneById(id);
+  if (!p || !visiblePanes().includes(p) || visiblePanes().length < 2) return;
+  stopTween();
+  spotlightId = id;
+  focusedId = id;
+  const v = views.get(id);
+  if (v && !v.pip) win.contentView.addChildView(v.view); // on top
+  layoutPanes();
+}
+ipcMain.on('pane:spotlight', (e, id) => { if (fromShell(e)) setSpotlight(String(id)); });
+
+// ---------- saved layouts ----------
+// A saved layout is a layout code kept under a name: where the screens sit, never what's on them.
+function saveLayoutAs(name) {
+  const label = cleanName(name, 24) || `Layout ${cfg.savedLayouts.length + 1}`;
+  const entry = { name: label, code: layoutCode() };
+  const at = cfg.savedLayouts.findIndex((l) => l.name === label);
+  if (at >= 0) cfg.savedLayouts[at] = entry;
+  else cfg.savedLayouts = [...cfg.savedLayouts, entry].slice(-MAX_SAVED_LAYOUTS);
+  saveConfig();
+  showNotice(`Saved "${label}"`);
+  return label;
+}
+function applySavedLayout(k) {
+  const entry = cfg.savedLayouts[Number(k)];
+  if (!entry) return { ok: false, message: 'No such layout.' };
+  const r = applyLayoutCode(entry.code);
+  showNotice(r.ok ? `${entry.name}: ${r.message}` : r.message);
+  return r;
+}
+function deleteSavedLayout(k) {
+  if (!cfg.savedLayouts[Number(k)]) return;
+  cfg.savedLayouts.splice(Number(k), 1);
+  saveConfig();
+  sendState();
+}
+function layoutsMenu() {
+  return [
+    ...cfg.savedLayouts.map((l, k) => ({ label: l.name, click: () => applySavedLayout(k) })),
+    ...(cfg.savedLayouts.length ? [{ type: 'separator' }] : []),
+    { label: 'Save this layout', click: () => saveLayoutAs('') },
+    { label: 'Manage layouts…', click: openSettings },
+  ];
+}
+ipcMain.on('layouts:menu', (e) => {
+  if (fromShell(e)) Menu.buildFromTemplate(layoutsMenu()).popup({ window: win });
+});
 
 // The bar's "lock to a side" menu: the whole screen, or a band on one edge with the rest left to other apps.
 const DOCK_CHOICES = [
@@ -1586,6 +1650,7 @@ ipcMain.on('pip:drag', (e, on) => {
 // for keeping a hand-made arrangement from being bumped, not for blocking the buttons); lock again once it's placed.
 function arrange(style) {
   if (!ARRANGE_STYLES.includes(style)) return;
+  spotlightId = '';
   // the way back, when this drops locks someone set on purpose
   const locks = cfg.panes.filter((p) => p.locked).map((p) => p.id);
   const before = cfg.freeLocked || locks.length
@@ -1658,7 +1723,7 @@ const NUDGE_DIRS = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 function nudgePane(id, kind, dir) {
   const p = paneById(id);
   const d = Object.prototype.hasOwnProperty.call(NUDGE_DIRS, dir) ? NUDGE_DIRS[dir] : null;
-  if (!p || !d || freeDrag || cfg.freeLocked || p.locked || !visiblePanes().includes(p) || !cfg.free[id]) return;
+  if (!p || !d || freeDrag || spotlightId || cfg.freeLocked || p.locked || !visiblePanes().includes(p) || !cfg.free[id]) return;
   stopTween();
   const cur = cfg.free[id];
   if (kind === 'swap') {
@@ -1738,7 +1803,7 @@ function applyLive(id, r, pointer) {
 }
 
 function startFreeDrag(id, kind, edges) {
-  if (freeDrag || cfg.freeLocked || !paneById(id) || paneById(id).locked) return;
+  if (freeDrag || spotlightId || cfg.freeLocked || !paneById(id) || paneById(id).locked) return;
   const r0 = computeLayout().find((l) => l.id === id);
   if (!r0 || !cfg.free[id]) return;
   stopTween();
@@ -1890,6 +1955,8 @@ function panelState() {
     leagues: LEAGUES,
     siteZoomCount: Object.keys(cfg.siteZoom).length,
     recentCount: cfg.recent.length,
+    savedLayouts: cfg.savedLayouts.map((l) => l.name),
+    spotlightId,
     resources: resourceStats(),
     startup: app.getLoginItemSettings().openAtLogin,
     sharedLogins: cfg.sharedLogins,
@@ -1999,6 +2066,10 @@ const PANEL_ACTIONS = {
   window: (k) => setWindow(Number(k)),
   renameWindow: (k, name) => renameWindow(k, name),
   dockTo: (edge, size) => dockTo(edge, size),
+  saveLayout: (name) => saveLayoutAs(String(name || '')),
+  applyLayout: (k) => applySavedLayout(k),
+  deleteLayout: (k) => deleteSavedLayout(k),
+  spotlight: (id) => { if (isPane(id)) setSpotlight(id); },
   clearRecent: () => { cfg.recent = []; saveConfig(); sendState(); },
   noticeAct: () => noticeAct(),
   noticeDismiss: () => clearNotice(),
@@ -2064,6 +2135,7 @@ function applyLayoutCode(raw) {
     && data.s.every((r) => Array.isArray(r) && r.length === 4 && r.every((n) => Number.isInteger(n) && n >= 0 && n <= 1000) && r[2] >= 50 && r[3] >= 50);
   if (!valid) return { ok: false, message: 'That layout code is damaged. Copy it again.' };
   if (cfg.freeLocked || anyLocked()) return { ok: false, message: 'Unlock every screen first, then paste the layout.' };
+  spotlightId = '';
   const list = visiblePanes();
   const target = {};
   data.s.slice(0, list.length).forEach((r, i) => {
@@ -2380,7 +2452,7 @@ function testHooks() {
     get shellReady() { return shellReady; },
     get freeDrag() { return freeDrag; },
     set freeDrag(d) { freeDrag = d; },
-    views, PERF, PANEL_ACTIONS, dockMenu, dockTo, noteRecent, homeData, nudgePane, arrange, noticeAct, get notice() { return notice; }, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
+    views, PERF, PANEL_ACTIONS, setSpotlight, get spotlightId() { return spotlightId; }, layoutsMenu, saveLayoutAs, applySavedLayout, dockMenu, dockTo, noteRecent, homeData, nudgePane, arrange, noticeAct, get notice() { return notice; }, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
     loadConfig, saveConfig, configPath, presetLayout, ensurePlaced, placeNew, hitsOthers, overlap, visiblePanes,
     setPaneCount, setPaneHidden, setPaneLocked, popOut, dockBack, setWindow, setDisplay, toggleFavorite, addFavorite,
     moveFavorite, isFavorite, openFavorite, layoutCode, applyLayoutCode, setFit, setMuted, muteAll, normalizeInput,
@@ -2422,6 +2494,8 @@ if (!app.requestSingleInstanceLock()) {
     globalShortcut.register('Control+Alt+T', () => setFlag('coverTaskbar', !cfg.coverTaskbar));
     globalShortcut.register('Control+Alt+P', openSettings);
     globalShortcut.register('Control+Alt+K', () => setFlag('dockOn', !cfg.dockOn));
+    globalShortcut.register('Control+Alt+Z', () => setSpotlight(focusedId));
+    globalShortcut.register('Control+Alt+L', () => Menu.buildFromTemplate(layoutsMenu()).popup({ window: win }));
     for (let k = 0; k < WINDOW_COUNT; k++) globalShortcut.register(`Control+Alt+${k + 1}`, () => setWindow(k));
 
     for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) {
