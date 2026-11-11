@@ -79,6 +79,7 @@ const PERF = {
   favoritesEveryState: false, // false: favorites (with their icons) go to the shell only when they change
   panelThrottleMs: 100, // the control panel gets at most one update per this many ms
   frameMs: 8, // how often drags, glides and fades step
+  loadTimeoutMs: 10000, // a screen waits this long for a site's first answer before showing "Couldn't load"
   glideStills: true, // glide photos of the screens instead of the live pages (no black flashes) (16 lands on ~31 ms Windows ticks: 33 fps; 8 gives ~63 fps)
 };
 const CHROME_UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
@@ -920,7 +921,7 @@ function createPane(p) {
   });
   view.setBackgroundColor('#000000');
   const wc = view.webContents;
-  const entry = { view, muted: true, audible: false, title: '', favicon: '', blocked: '', fit: 'off', fs: false, fitTimer: null, pip: null, layoutPip: null };
+  const entry = { view, muted: true, audible: false, title: '', favicon: '', blocked: '', fit: 'off', fs: false, fitTimer: null, loadTimer: null, pip: null, layoutPip: null };
   views.set(p.id, entry);
 
   wc.setUserAgent(CHROME_UA);
@@ -983,10 +984,25 @@ function createPane(p) {
   wc.on('did-frame-finish-load', () => { if (entry.fit !== 'off') applyFit(entry); });
   // A site that fails to load (bad link, certificate error, offline) would leave the screen with nothing to draw,
   // which shows up as a stale gray box for a few seconds. Show a short explanation instead.
+  const showLoadError = (url, why) => wc.loadFile(path.join(__dirname, 'error.html'), { query: { url, why } }).catch(() => {});
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3 || !/^https?:/i.test(url)) return; // -3: replaced by another navigation
-    wc.loadFile(path.join(__dirname, 'error.html'), { query: { url, why: desc.replace(/^ERR_/, '').replace(/_/g, ' ').toLowerCase() } }).catch(() => {});
+    clearTimeout(entry.loadTimer);
+    showLoadError(url, desc.replace(/^ERR_/, '').replace(/_/g, ' ').toLowerCase());
   });
+  // A site that never answers (slow DNS, a server that accepts the connection and goes quiet) reports no failure
+  // for a long time or ever, and the screen sits on the old page meanwhile. Give up after PERF.loadTimeoutMs.
+  wc.on('did-start-navigation', (_e, url, inPage, isMainFrame) => {
+    if (!isMainFrame || inPage) return;
+    clearTimeout(entry.loadTimer);
+    entry.loadTimer = /^https?:/i.test(url) ? setTimeout(() => {
+      if (wc.isDestroyed()) return;
+      logLine(`screen ${p.id}: no answer from ${siteOf(url) || url} after ${PERF.loadTimeoutMs} ms`);
+      wc.stop();
+      showLoadError(url, 'the site took too long to answer');
+    }, PERF.loadTimeoutMs) : null;
+  });
+  wc.on('did-navigate', () => clearTimeout(entry.loadTimer));
 
   // Ctrl + scroll changes this screen's zoom and remembers it for the site.
   wc.on('zoom-changed', (_e, direction) => {
@@ -1004,6 +1020,7 @@ function destroyPane(id) {
   if (!e) return;
   views.delete(id);
   clearInterval(e.fitTimer);
+  clearTimeout(e.loadTimer);
   if (e.pip && !e.pip.isDestroyed()) {
     try { e.pip.contentView.removeChildView(e.view); } catch { /* already gone */ }
     e.pip.destroy();
@@ -2232,7 +2249,18 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => { quitting = true; releaseSpace(); });
   app.on('will-quit', () => { globalShortcut.unregisterAll(); releaseSpace(); });
   process.on('exit', releaseSpace);
-  process.on('uncaughtException', (err) => { console.error(err); logLine(`uncaught error: ${err && err.stack ? err.stack : err}`); releaseSpace(); });
+  process.on('uncaughtException', (err) => {
+    console.error(err);
+    logLine(`uncaught error: ${err && err.stack ? err.stack : err}`);
+    releaseSpace();
+    // Start again clean instead of carrying on in an unknown state. Not in the first 30 s: an error at startup
+    // would restart forever.
+    if (TEST || quitting || process.uptime() < 30) return;
+    logLine('restarting after the uncaught error');
+    app.relaunch();
+    app.exit(1);
+  });
+  process.on('unhandledRejection', (err) => { console.error(err); logLine(`unhandled rejection: ${err && err.stack ? err.stack : err}`); });
   // A crashed page reloads itself; a crashed bar/frame layer reloads too. Either way it's logged.
   app.on('render-process-gone', (_e, wc, details) => {
     const id = [...views.entries()].find(([, v]) => v.view.webContents === wc)?.[0];

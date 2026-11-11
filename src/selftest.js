@@ -58,8 +58,10 @@ module.exports = async function selftest(h) {
 
   // a small local web server for pages, a favicon and a "ping" the screens try to reach
   const icon = fs.readFileSync(path.join(__dirname, '..', 'assets', 'tray.png'));
+  const hung = [];
   const server = http.createServer((req, res) => {
     if (req.url === '/favicon.ico') { res.writeHead(200, { 'Content-Type': 'image/png' }); res.end(icon); return; }
+    if (req.url === '/hang') { hung.push(res); return; } // accepts the connection and never answers
     if (req.url === '/ping') { res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain' }); res.end('pong'); return; }
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`<!doctype html><title>Test page ${req.url}</title><body style="margin:0;background:#123">
@@ -601,11 +603,25 @@ module.exports = async function selftest(h) {
   await test('Safety', 'A site that fails shows "Couldn\'t load"', async () => {
     const id = ids()[3];
     h.PANEL_ACTIONS.navigate(id, 'https://sv-selftest.invalid/');
-    const ok = await waitFor(() => wc(id).getURL().includes('error.html'), 10000);
+    const ok = await waitFor(() => wc(id).getURL().includes('error.html'), h.PERF.loadTimeoutMs + 5000);
     assert(ok, `stayed on ${wc(id).getURL()}`);
     const title = await wc(id).executeJavaScript(`document.getElementById('title').textContent`);
     assert(/sv-selftest\.invalid/.test(title), `title: ${title}`);
     return title;
+  });
+  await test('Safety', 'A site that never answers gives up', async () => {
+    const id = ids()[3];
+    const usual = h.PERF.loadTimeoutMs;
+    h.PERF.loadTimeoutMs = 1500;
+    const t = Date.now();
+    h.PANEL_ACTIONS.navigate(id, `${base}/hang`);
+    const ok = await waitFor(() => wc(id).getURL().includes('error.html') && wc(id).getURL().includes('hang'), 6000);
+    h.PERF.loadTimeoutMs = usual;
+    hung.splice(0).forEach((res) => res.destroy());
+    assert(ok, `stayed on ${wc(id).getURL()}`);
+    const why = await wc(id).executeJavaScript(`document.getElementById('why').textContent`);
+    assert(/too long/.test(why), `why: ${why}`);
+    return `gave up after ${Date.now() - t} ms`;
   });
   await test('Safety', 'Control panel ignores bad requests', () => {
     const skip = new Set(['quit', 'show', 'hide', 'openDiscord']);
