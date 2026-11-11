@@ -500,3 +500,18 @@ body.glass .game.live b::before { content: ""; display: inline-block; width: 6px
   .topbar.noticing .notice-text { display: block; }
   .topbar.noticing .tools .ibtn[data-key] { display: none; }
 }
+
+/* ---------------- calmer bars ---------------- */
+/* A screen's bar shows its address and sound; the other buttons appear when you point at the bar, Tab into it or
+   select the screen. Buttons that are switched on (locked, video only, saved) always show. */
+.hdr .btn:not(.mute):not(.on) { opacity: 0; }
+.hdr:hover .btn:not(:disabled), .hdr:focus-within .btn:not(:disabled), .hdr.focused .btn:not(:disabled), .hdr.moving .btn:not(:disabled) { opacity: 1; }
+.hdr:hover .btn:disabled, .hdr:focus-within .btn:disabled, .hdr.focused .btn:disabled { opacity: 0.3; }
+.hdr .grip { opacity: 0.45; transition: opacity 140ms ease; }
+.hdr:hover .grip, .hdr.focused .grip { opacity: 1; }
+.ibtn:disabled { opacity: 0.3; cursor: default; }
+.ibtn:disabled:hover { background: none; color: var(--dim); }
+/* the lock-to-a-side button mirrors its picture when locked to the left */
+.ibtn.dockb[data-edge="left"] svg { transform: scaleX(-1); }
+.ibtn.dockb[data-edge="top"] svg { transform: rotate(-90deg); }
+.ibtn.dockb[data-edge="bottom"] svg { transform: rotate(90deg); }

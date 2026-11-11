@@ -1,13 +1,92 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Empty screen</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<title>Home</title>
 <style>
-  :root { color-scheme: dark; }
-  html, body { height: 100%; margin: 0; color: #d6dbe0; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
-  html { background: radial-gradient(120% 90% at 0% 0%, rgba(79, 179, 166, 0.2), transparent 60%), radial-gradient(110% 90% at 100% 100%, rgba(139, 124, 246, 0.2), transparent 60%), #0d1015; }
-  body { display: flex; flex-direction: column; justify-content: center; padding: 0 7vw; box-sizing: border-box; }
-  h1 { margin: 0 0 1.5vw; font-size: 6vw; font-weight: 600; }
-  p { margin: 0; font-size: 3.6vw; line-height: 1.35; color: #7d8791; }
+  /* The home page of an empty screen. Screens are often small and zoomed out, so everything is sized from the
+     screen's own width and height rather than in fixed pixels. */
+  :root { color-scheme: dark; --u: clamp(9px, 1.9vmin + 0.9vw, 34px); --accent: #4fb3a6; --violet: #8b7cf6; --live: #f5b13d; --text: #e6eaee; --dim: #8a95a0; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; color: var(--text); font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; font-size: var(--u); }
+  html { background: radial-gradient(120% 90% at 0% 0%, rgba(79, 179, 166, 0.22), transparent 60%), radial-gradient(110% 90% at 100% 100%, rgba(139, 124, 246, 0.22), transparent 60%), #0d1015; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5em; padding: 1.4em 2em; overflow: hidden auto; }
+  .logo { display: flex; align-items: center; gap: 0.5em; font-size: 1.9em; font-weight: 700; letter-spacing: -0.01em; }
+  .mark { display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 0.36em; background: linear-gradient(135deg, #4fb3a6, #5f93f0 55%, #8b7cf6); color: #071417; font-weight: 800; box-shadow: 0 0.3em 1.2em rgba(95, 147, 240, 0.35); }
+  .hello { margin: -0.9em 0 0; color: var(--dim); font-size: 0.95em; }
+  form { width: min(100%, 30em); }
+  input {
+    width: 100%; height: 2.7em; padding: 0 1.1em; border-radius: 1.35em; font: inherit; color: var(--text);
+    border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.07); outline: none;
+    transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  }
+  input::placeholder { color: var(--dim); }
+  input:focus { border-color: var(--accent); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 0.2em rgba(79, 179, 166, 0.22); }
+  section { width: min(100%, 44em); }
+  h2 { margin: 0 0 0.6em; font-size: 0.72em; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); text-align: center; }
+  .tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6em; }
+  a.tile {
+    display: flex; align-items: center; gap: 0.55em; max-width: 13em; padding: 0.45em 0.9em 0.45em 0.45em; border-radius: 0.9em;
+    color: var(--text); text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.06);
+    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 160ms ease, border-color 160ms ease;
+    animation: rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  a.tile:hover, a.tile:focus-visible { transform: translateY(-0.15em); background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.28); outline: none; }
+  .letter { flex: none; display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 0.55em; font-weight: 700; color: #071417; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tip { margin: 0; color: var(--dim); font-size: 0.8em; text-align: center; }
+  kbd { padding: 0.05em 0.4em; border-radius: 0.3em; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); font: inherit; }
+  [hidden] { display: none !important; }
+  @keyframes rise { from { opacity: 0; transform: translateY(0.5em); } }
+  @media (max-height: 260px) { .hello, .tip { display: none; } body { gap: 0.8em; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
-<h1>Empty screen</h1>
-<p>Click the address bar above and type a link, or drag a link onto it.</p>
+<div class="logo"><span class="mark">7</span><span>Views</span></div>
+<p class="hello" id="hello"></p>
+<form id="go"><input id="q" type="text" placeholder="Type a site or search" aria-label="Type a site or search" spellcheck="false" autocomplete="off"></form>
+<section id="favs" hidden><h2>Favorites</h2><div class="tiles" id="fav-tiles"></div></section>
+<section id="recent" hidden><h2>Recently opened</h2><div class="tiles" id="recent-tiles"></div></section>
+<p class="tip">Pick a tile, type above, or drop a link on this screen's bar. <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> opens the control panel.</p>
+<script>
+  // Everything shown here arrives in this page's own address (see homeData in main.js). The tiles are ordinary
+  // links, so opening one is just this screen going to that site.
+  const web = (u) => { try { return /^https?:$/.test(new URL(u).protocol); } catch { return false; } };
+  let data = {};
+  try { data = JSON.parse(new URLSearchParams(location.search).get('d') || '{}') || {}; } catch { data = {}; }
+  const COLORS = ['#4fb3a6', '#f5b13d', '#8b7cf6', '#5f93f0', '#ef7d95', '#7ccf6b'];
+  const fill = (boxId, tilesId, list) => {
+    const items = (Array.isArray(list) ? list : []).filter((x) => x && typeof x.u === 'string' && web(x.u));
+    document.getElementById(boxId).hidden = !items.length;
+    items.forEach((x, k) => {
+      const name = String(x.t || new URL(x.u).hostname.replace(/^www\./, ''));
+      const a = document.createElement('a');
+      a.className = 'tile';
+      a.href = x.u;
+      a.title = x.u;
+      a.style.animationDelay = `${k * 35}ms`;
+      const letter = document.createElement('span');
+      letter.className = 'letter';
+      letter.textContent = (name.match(/[a-z0-9]/i) || ['•'])[0].toUpperCase();
+      letter.style.background = COLORS[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % COLORS.length];
+      const label = document.createElement('span');
+      label.className = 'name';
+      label.textContent = name;
+      a.append(letter, label);
+      document.getElementById(tilesId).append(a);
+    });
+  };
+  fill('favs', 'fav-tiles', data.f);
+  fill('recent', 'recent-tiles', data.r);
+
+  const hour = new Date().getHours();
+  document.getElementById('hello').textContent = `${hour < 5 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}. What are we watching?`;
+
+  // the same rules as a screen's address bar: a link opens, anything else is searched
+  document.getElementById('go').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const s = document.getElementById('q').value.trim();
+    if (!s) return;
+    if (/^https?:\/\//i.test(s)) location.href = s;
+    else if (!/\s/.test(s) && /^[\w-]+(\.[\w-]+)+(:\d+)?([/?#].*)?$/.test(s)) location.href = `https://${s}`;
+    else location.href = `https://www.google.com/search?q=${encodeURIComponent(s)}`;
+  });
+</script>

@@ -128,11 +128,13 @@ function defaultConfig() {
     discordInvite: '', // the 7 Views .1107 server's invite link, for the control panel's "Open Discord"
     siteZoom: {}, // page zoom remembered per website: { 'pluto.tv': 0.6 }
     windowNames: [...WINDOW_NAMES], // what the three windows are called on the bar
+    recent: [], // the last few sites opened, newest first, one per website: [{ url, title }] (for the home page)
     panes: [1, 2, 3, 4].map((n) => ({ id: `p${n}`, url: '', zoom: 0.4 })),
   };
 }
 
 const WINDOW_NAMES = ['Sports', 'TV', 'Work'];
+const MAX_RECENT = 8;
 const cleanName = (x) => String(typeof x === 'string' ? x : '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 12);
 let startupNote = ''; // something loadConfig had to change that the owner should hear about once
 
@@ -245,6 +247,7 @@ function loadConfig() {
     .slice(-200)
     .map(([site, z]) => [site, clamp(Number(z), ZOOM_MIN, ZOOM_MAX)]));
   if (!LEAGUES.some(([, id]) => id === out.league)) out.league = base.league;
+  out.recent = cleanFavorites((Array.isArray(saved.recent) ? saved.recent : []).map((r) => ({ ...r, icon: '' }))).slice(0, MAX_RECENT).map(({ url, title }) => ({ url, title }));
   out.windowNames = WINDOW_NAMES.map((d, k) => cleanName(Array.isArray(saved.windowNames) ? saved.windowNames[k] : '') || d);
   if (Array.isArray(saved.panes) && saved.panes.length > MAX_PANES) startupNote = `This setup had ${saved.panes.length} screens; 7 Views shows up to ${MAX_PANES}, so the extra ones were dropped.`;
 
@@ -879,6 +882,8 @@ function sendState() {
     arrangeStyle: cfg.arrangeStyle,
     coverTaskbar: cfg.coverTaskbar,
     dockOn: cfg.dockOn,
+    dockEdge: cfg.dockEdge,
+    dockSize: cfg.dockSize,
     onTop: cfg.onTop,
     glass: cfg.glass,
     boxes: cfg.boxes,
@@ -915,11 +920,28 @@ function sendState() {
   });
 }
 
+// What the home page (an empty screen) shows. It travels in the page's address, so the page needs no access to
+// anything: its tiles are ordinary links. Icons stay behind (too big for an address); tiles use the first letter.
+function homeData() {
+  const brief = (list) => list.map((f) => ({ u: f.url, t: f.title || hostOf(f.url) }));
+  return JSON.stringify({ f: brief(cfg.favorites), r: brief(cfg.recent.filter((r) => !isFavorite(r.url))) });
+}
+
 function loadPane(p) {
   const wc = views.get(p.id).view.webContents;
   if (p.url) wc.loadURL(p.url).catch(() => {});
-  else wc.loadFile(path.join(__dirname, 'start.html')).catch(() => {});
+  else wc.loadFile(path.join(__dirname, 'start.html'), { query: { d: homeData() } }).catch(() => {});
 }
+
+// Remember a site that was opened (newest first, one entry per website).
+function noteRecent(url, title) {
+  const site = siteOf(url);
+  if (!site || TEST_QUIET_RECENT.test(site)) return;
+  const old = cfg.recent.find((r) => siteOf(r.url) === site);
+  cfg.recent = [{ url, title: cleanTitle(title || (old && old.url === url ? old.title : ''), url) }, ...cfg.recent.filter((r) => r !== old)].slice(0, MAX_RECENT);
+  saveConfig();
+}
+const TEST_QUIET_RECENT = /^(127\.0\.0\.1|localhost|\[::1\])$/; // pages on this PC aren't sites to suggest
 
 function createPane(p) {
   const view = new WebContentsView({
@@ -980,8 +1002,9 @@ function createPane(p) {
     sendState();
   };
   wc.on('did-navigate', onNav);
+  wc.on('did-navigate', (_e, url) => noteRecent(url, ''));
   wc.on('did-navigate-in-page', onNav);
-  wc.on('page-title-updated', (_e, title) => { entry.title = title; sendState(); });
+  wc.on('page-title-updated', (_e, title) => { entry.title = title; noteRecent(wc.getURL(), title); sendState(); });
   wc.on('page-favicon-updated', (_e, icons) => { entry.favicon = icons.find((u) => /^https?:/i.test(u)) || ''; });
   wc.on('media-started-playing', () => { entry.audible = true; sendState(); });
   wc.on('media-paused', () => { entry.audible = false; sendState(); });
@@ -1291,6 +1314,32 @@ function setDock(edge, size) {
   refreshTray();
   sendState();
 }
+
+// The bar's "lock to a side" menu: the whole screen, or a band on one edge with the rest left to other apps.
+const DOCK_CHOICES = [
+  ['Left half', 'left', 0.5], ['Right half', 'right', 0.5], ['Left third', 'left', 0.33], ['Right third', 'right', 0.33],
+  ['Top half', 'top', 0.5], ['Bottom half', 'bottom', 0.5],
+];
+function dockTo(edge, size) {
+  if (!DOCK_EDGES.includes(edge) || !Number.isFinite(Number(size))) return;
+  if (cfg.dockOn) { setDock(edge, size); return; }
+  cfg.dockEdge = edge;
+  cfg.dockSize = clamp(Number(size), DOCK_MIN, DOCK_MAX);
+  setFlag('dockOn', true);
+}
+function dockMenu() {
+  const at = (edge, size) => cfg.dockOn && cfg.dockEdge === edge && Math.abs(cfg.dockSize - size) < 0.005;
+  return [
+    { label: 'Whole screen', type: 'radio', checked: !cfg.dockOn, click: () => { if (cfg.dockOn) setFlag('dockOn', false); } },
+    { type: 'separator' },
+    ...DOCK_CHOICES.map(([label, edge, size]) => ({ label, type: 'radio', checked: at(edge, size), click: () => dockTo(edge, size) })),
+    { type: 'separator' },
+    { label: 'Other sizes…', click: openSettings },
+  ];
+}
+ipcMain.on('dock:menu', (e) => {
+  if (fromShell(e)) Menu.buildFromTemplate(dockMenu()).popup({ window: win });
+});
 
 function setPaneLocked(id, locked) {
   const p = paneById(id);
@@ -1840,6 +1889,7 @@ function panelState() {
     league: cfg.league,
     leagues: LEAGUES,
     siteZoomCount: Object.keys(cfg.siteZoom).length,
+    recentCount: cfg.recent.length,
     resources: resourceStats(),
     startup: app.getLoginItemSettings().openAtLogin,
     sharedLogins: cfg.sharedLogins,
@@ -1948,6 +1998,8 @@ const PANEL_ACTIONS = {
   flag: (key, on) => { if (FLAGS.includes(key)) setFlag(key, Boolean(on)); },
   window: (k) => setWindow(Number(k)),
   renameWindow: (k, name) => renameWindow(k, name),
+  dockTo: (edge, size) => dockTo(edge, size),
+  clearRecent: () => { cfg.recent = []; saveConfig(); sendState(); },
   noticeAct: () => noticeAct(),
   noticeDismiss: () => clearNotice(),
   arrange: (style) => arrange(style),
@@ -2063,6 +2115,7 @@ function openSettings() {
     alwaysOnTop: true, // the wall stays on top, so settings must be too or it opens behind it
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),
+      offscreen: TEST, // the self-test never shows it; drawn offscreen it can still be photographed (SV_TEST_SHOT)
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -2327,7 +2380,7 @@ function testHooks() {
     get shellReady() { return shellReady; },
     get freeDrag() { return freeDrag; },
     set freeDrag(d) { freeDrag = d; },
-    views, PERF, PANEL_ACTIONS, nudgePane, arrange, noticeAct, get notice() { return notice; }, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
+    views, PERF, PANEL_ACTIONS, dockMenu, dockTo, noteRecent, homeData, nudgePane, arrange, noticeAct, get notice() { return notice; }, ARRANGE_STYLES, MIN_PANES, MAX_PANES, MAX_FAVORITES, HEADER_H, TOOLBAR_H, TAB_H,
     loadConfig, saveConfig, configPath, presetLayout, ensurePlaced, placeNew, hitsOthers, overlap, visiblePanes,
     setPaneCount, setPaneHidden, setPaneLocked, popOut, dockBack, setWindow, setDisplay, toggleFavorite, addFavorite,
     moveFavorite, isFavorite, openFavorite, layoutCode, applyLayoutCode, setFit, setMuted, muteAll, normalizeInput,

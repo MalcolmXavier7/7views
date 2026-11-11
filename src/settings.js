@@ -137,11 +137,16 @@ function renderLayout() {
   $('fewer').disabled = S.paneCount <= S.minPanes;
   $('more').disabled = S.paneCount >= S.maxPanes;
   $('dock-on').checked = S.flags.dockOn;
+  const quick = S.flags.dockOn && Math.abs(S.dockSize - 0.5) < 0.005 ? S.dockEdge : S.flags.dockOn ? '' : 'whole';
+  segmented($('dock-quick'), [['whole', 'Whole screen'], ['left', 'Left half'], ['right', 'Right half']], quick,
+    (v) => (v === 'whole' ? api.act('flag', 'dockOn', false) : api.act('dockTo', v, 0.5)));
+  $('clear-recent').disabled = !S.recentCount;
   segmented($('dock-edge'), S.dockEdges.map((e) => [e, e[0].toUpperCase() + e.slice(1)]), S.dockEdge, (e) => api.act('dock', e));
   const sizes = [0.25, 0.33, 0.4, 0.5, 0.6, 0.67, 0.75];
   if (!sizes.some((z) => Math.abs(z - S.dockSize) < 0.005)) sizes.push(S.dockSize);
   fillSelect($('dock-size'), sizes.sort((a, b) => a - b).map((z) => [z, `${Math.round(z * 100)}% of the screen`]), sizes.find((z) => Math.abs(z - S.dockSize) < 0.005));
 }
+$('clear-recent').addEventListener('click', () => api.act('clearRecent'));
 $('dock-on').addEventListener('change', (e) => api.act('flag', 'dockOn', e.target.checked));
 $('dock-size').addEventListener('change', (e) => api.act('dock', null, Number(e.target.value)));
 $('fewer').addEventListener('click', () => api.act('count', S.paneCount - 1));

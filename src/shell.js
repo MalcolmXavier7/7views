@@ -152,12 +152,6 @@ let favKey = '';
 
 const toggles = [
   ['freeLocked', ICON.lock, 'Lock every screen in place', 'Unlock: screens can move again'],
-  ['dockOn', ICON.dock, 'Lock 7 Views to part of the screen; other apps use the rest (Ctrl+Alt+K)', 'Use the whole screen again (Ctrl+Alt+K)'],
-  ['coverTaskbar', ICON.taskbar, 'Cover the taskbar too (Ctrl+Alt+T)', 'Leave room for the taskbar (Ctrl+Alt+T)'],
-  ['onTop', ICON.pin, 'Keep 7 Views above other windows', 'Let other windows go on top of 7 Views'],
-  ['boxes', ICON.boxes, 'Show the bars around each screen (Ctrl+Alt+B)', 'Hide the bars so the screens read as one picture (Ctrl+Alt+B)'],
-  ['glass', ICON.glass, 'Glass look', 'Plain look'],
-  ['ticker', ICON.scores, 'Show scores along the bottom', 'Hide the scores'],
 ].map(([key, icon, offTip, onTip]) => {
   const b = button('ibtn', icon, offTip, () => sv.setFlag(key, !S[key]));
   b.dataset.key = key;
@@ -165,6 +159,10 @@ const toggles = [
   b.dataset.onTip = onTip;
   return b;
 });
+// Lock 7 Views to the left or right (or top, bottom) of the monitor; other apps get the rest.
+const dockBtn = button('ibtn dockb', ICON.dock, '', () => sv.dockMenu());
+// Float the selected screen in its own small window above everything.
+const pipBtn = button('ibtn', ICON.pip, '', () => { if (S.focusedId) sv.popOut(S.focusedId); });
 const muteAllBtn = button('ibtn muteall', ICON.muted, 'Mute every screen (Ctrl+Alt+M)', () => sv.muteAll());
 
 // One short line from main (a preset dropped your locks, 7 Views restarted...), with at most one button.
@@ -188,6 +186,8 @@ function renderNotice() {
 const tools = el('div', 'tools');
 tools.append(
   ...toggles,
+  dockBtn,
+  pipBtn,
   el('span', 'sep'),
   muteAllBtn,
   button('ibtn', ICON.gear, 'Control panel: every setting in one place (Ctrl+Alt+P)', () => sv.openSettings()),
@@ -256,6 +256,19 @@ function renderBar() {
     b.setAttribute('aria-label', b.title);
   });
   renderNotice();
+  dockBtn.classList.toggle('on', S.dockOn);
+  dockBtn.dataset.edge = S.dockOn ? S.dockEdge : '';
+  dockBtn.title = S.dockOn
+    ? `Locked to the ${S.dockEdge} ${Math.round(S.dockSize * 100)}% of the screen. Click to change or use the whole screen (Ctrl+Alt+K)`
+    : 'Lock 7 Views to the left or right side; other apps use the rest (Ctrl+Alt+K)';
+  dockBtn.setAttribute('aria-label', dockBtn.title);
+  const inPlace = S.panes.filter((p) => !p.hidden && !p.pip);
+  const sel = inPlace.find((p) => p.id === S.focusedId);
+  pipBtn.disabled = !sel || inPlace.length <= 1;
+  pipBtn.title = sel && inPlace.length > 1
+    ? `Picture-in-picture: float ${sel.label} in its own small window above your other apps`
+    : 'Picture-in-picture needs at least two screens on';
+  pipBtn.setAttribute('aria-label', pipBtn.title);
   const sounding = S.panes.some((p) => !p.muted);
   muteAllBtn.classList.toggle('sounding', sounding);
   muteAllBtn.innerHTML = sounding ? ICON.sound : ICON.muted;

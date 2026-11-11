@@ -44,6 +44,7 @@
         <div class="stepper"><button type="button" id="fewer" aria-label="One screen fewer">−</button><output id="count"></output><button type="button" id="more" aria-label="One more screen">+</button></div>
       </div>
       <label class="switch-row"><span>Lock to part of the screen<small>Your other apps' maximized windows fill the rest</small></span><input type="checkbox" role="switch" id="dock-on"></label>
+      <div class="field"><span class="label">Quick</span><div class="seg" id="dock-quick"></div></div>
       <div class="field"><span class="label">Edge</span><div class="seg" id="dock-edge"></div></div>
       <div class="field"><label class="label" for="dock-size">Size</label><select id="dock-size"></select></div>
     </section>
@@ -130,6 +131,7 @@
       <label class="switch-row"><span>Start 7 Views with Windows</span><input type="checkbox" role="switch" id="startup"></label>
       <div class="field"><label class="label" for="zoom">Page zoom, all screens</label><select id="zoom"></select></div>
       <p class="note" id="site-zoom-note"></p>
+      <div class="field"><span class="label">Recent sites on the home page</span><button type="button" class="btn small" id="clear-recent">Clear</button></div>
       <label class="switch-row"><span>Share logins across all screens</span><input type="checkbox" role="switch" id="shared"></label>
       <p class="note">Log in once and every screen is signed in. Changing this reloads the screens.</p>
     </section>

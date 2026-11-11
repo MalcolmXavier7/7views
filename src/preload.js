@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('sideview', {
   dragWall: (on) => ipcRenderer.send('wall:drag', on),
   hide: () => ipcRenderer.send('wall:hide'),
   monitorMenu: () => ipcRenderer.send('monitor:menu'),
+  dockMenu: () => ipcRenderer.send('dock:menu'),
   setCount: (n) => ipcRenderer.send('panes:count', n),
   setWindow: (k) => ipcRenderer.send('window:set', k),
   arrange: (style) => ipcRenderer.send('free:arrange', style),

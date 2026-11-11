@@ -371,6 +371,39 @@ module.exports = async function selftest(h) {
     for (const junk of [undefined, null, {}, 'constructor', 5]) h.nudgePane(a, junk, junk);
     return 'stops at neighbours, respects locks, swaps';
   });
+  await test('Home page', 'An empty screen shows favorites and recent sites as links', async () => {
+    const id = ids()[0];
+    const keep = { favorites: h.cfg.favorites, recent: h.cfg.recent };
+    h.cfg.favorites = [{ url: 'https://fav.example/', title: 'Fav <b>one</b>', icon: '' }];
+    h.cfg.recent = [];
+    h.noteRecent('https://www.recent.example/watch/1', 'Watch Big Game Live | Recent');
+    h.noteRecent('https://www.recent.example/watch/2', '');
+    h.noteRecent('https://fav.example/', 'Fav');
+    h.noteRecent('http://127.0.0.1:1/x', 'local');
+    h.noteRecent('javascript:alert(1)', 'bad');
+    assert(h.cfg.recent.length === 2 && h.cfg.recent[1].url.endsWith('/watch/2'), `recent: ${JSON.stringify(h.cfg.recent)}`);
+    h.PANEL_ACTIONS.navigate(id, '');
+    await waitFor(() => wc(id).getURL().includes('start.html'), 4000);
+    const seen = await wc(id).executeJavaScript(`new Promise((ok) => setTimeout(() => ok({
+      favs: [...document.querySelectorAll('#fav-tiles a')].map((x) => x.href + '|' + x.textContent),
+      recent: [...document.querySelectorAll('#recent-tiles a')].map((x) => x.href),
+      injected: document.querySelectorAll('.tile b').length,
+    }), 50))`);
+    h.cfg.favorites = keep.favorites;
+    h.cfg.recent = keep.recent;
+    assert(seen.favs.length === 1 && seen.favs[0].startsWith('https://fav.example/|'), `favorites: ${seen.favs}`);
+    assert(seen.recent.length === 1 && seen.recent[0].includes('recent.example'), `recent: ${seen.recent}`);
+    assert(seen.injected === 0, 'a title was read as HTML');
+    return 'favorite and recent tiles are plain links; one entry per site; local pages and odd links left out';
+  });
+  await test('Lock to a side', 'The menu offers whole screen, left and right', () => {
+    const labels = h.dockMenu().filter((m) => m.label).map((m) => m.label);
+    for (const want of ['Whole screen', 'Left half', 'Right half']) assert(labels.includes(want), `no "${want}" in ${labels.join(', ')}`);
+    assert(h.dockMenu().find((m) => m.label === 'Whole screen').checked === !h.cfg.dockOn, 'wrong choice ticked');
+    for (const junk of [undefined, null, {}, 'sideways', 5]) h.dockTo(junk, junk);
+    assert(!h.cfg.dockOn, 'a junk choice turned the lock on');
+    return labels.join(' · ');
+  });
   await test('Windows', 'Windows can be named', () => {
     h.PANEL_ACTIONS.renameWindow(0, '  Game night and more  ');
     assert(h.cfg.windowNames[0] === 'Game night a', `name: "${h.cfg.windowNames[0]}"`);
@@ -880,6 +913,27 @@ module.exports = async function selftest(h) {
       fs.writeFileSync(file, (await h.win.webContents.capturePage()).toPNG());
     };
     await shoot(process.env.SV_TEST_SHOT);
+    // the home page of an empty screen, and the control panel. A page view in the hidden test window never paints,
+    // so the home page is drawn in an offscreen window of its own; a capture that doesn't come back is skipped.
+    const part = (name) => process.env.SV_TEST_SHOT.replace(/\.png$/i, `-${name}.png`);
+    const grab = (contents) => Promise.race([contents.capturePage(), sleep(3000).then(() => null)]);
+    h.cfg.recent = [{ url: 'https://example.net/', title: 'Example Net' }, { url: 'https://news.example/', title: 'News' }];
+    const { BrowserWindow } = require('electron');
+    const home = new BrowserWindow({ show: false, width: 900, height: 560, webPreferences: { offscreen: true, sandbox: true } });
+    await home.loadFile(path.join(__dirname, 'start.html'), { query: { d: h.homeData() } });
+    await sleep(900);
+    const homeShot = await grab(home.webContents);
+    if (homeShot && !homeShot.isEmpty()) fs.writeFileSync(part('home'), homeShot.toPNG());
+    home.destroy();
+    h.cfg.recent = [];
+    h.openSettings();
+    await waitFor(() => h.settingsWin && !h.settingsWin.webContents.isLoading(), 8000);
+    if (h.settingsWin) {
+      h.sendState();
+      await sleep(900);
+      const panelShot = await grab(h.settingsWin.webContents);
+      if (panelShot && !panelShot.isEmpty()) fs.writeFileSync(part('panel'), panelShot.toPNG());
+    }
     h.setFlag('glass', false);
     await shoot(process.env.SV_TEST_SHOT.replace(/\.png$/i, '-plain.png'));
   }
