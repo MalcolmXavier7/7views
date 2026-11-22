@@ -19,6 +19,19 @@ const SWITCHES = [
   ['freeLocked', 'Lock every screen', 'Nothing can be moved or resized'],
 ];
 
+// ---------------- section nav ----------------
+// One section shows at a time; the rest just sit hidden in the DOM (their own render functions keep running).
+let activeSection = 'monitors';
+function showSection(id) {
+  if (!document.getElementById(id)) return;
+  activeSection = id;
+  for (const section of document.querySelectorAll('main.grid > section')) section.hidden = section.id !== id;
+  for (const b of document.querySelectorAll('.side-link')) b.classList.toggle('on', b.dataset.id === id);
+  window.scrollTo(0, 0);
+}
+for (const b of document.querySelectorAll('.side-link')) b.addEventListener('click', () => showSection(b.dataset.id));
+showSection(activeSection);
+
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } };
 const pct = (z) => `${Math.round(z * 100)}%`;
 const editing = (el) => document.activeElement === el; // never overwrite a field you're typing in

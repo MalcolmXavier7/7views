@@ -15,9 +15,6 @@
         <p id="status">Control panel</p>
       </div>
     </div>
-    <nav class="jump" aria-label="Sections">
-      <a href="#monitors">Monitors</a><a href="#layout">Layout</a><a href="#screens">Screens</a><a href="#sound">Sound</a><a href="#look">Look</a><a href="#favorites">Favorites</a><a href="#community">Community</a><a href="#general">General</a><a href="#logins">Logins</a>
-    </nav>
     <div class="meter" id="meter" title="What 7 Views is using right now (updates every 2 seconds)"></div>
     <div class="top-actions">
       <button type="button" id="showhide" class="btn"></button>
@@ -26,6 +23,20 @@
     <div class="notice" id="notice" role="status" hidden><span id="notice-text"></span><button type="button" class="btn small primary" id="notice-act"></button><button type="button" class="btn small" id="notice-x">Dismiss</button></div>
   </header>
 
+  <div class="panel">
+  <nav class="side-nav" aria-label="Sections" id="side-nav">
+    <button type="button" class="side-link" data-id="monitors">Monitors</button>
+    <button type="button" class="side-link" data-id="layout">Layout</button>
+    <button type="button" class="side-link" data-id="screens">Screens</button>
+    <button type="button" class="side-link" data-id="sound">Sound</button>
+    <button type="button" class="side-link" data-id="look">Look &amp; behavior</button>
+    <button type="button" class="side-link" data-id="scores">Scores</button>
+    <button type="button" class="side-link" data-id="favorites">Favorites</button>
+    <button type="button" class="side-link" data-id="community">Community</button>
+    <button type="button" class="side-link" data-id="general">General</button>
+    <button type="button" class="side-link" data-id="logins">Logins</button>
+    <button type="button" class="side-link" data-id="keys">Shortcuts</button>
+  </nav>
   <main class="grid">
     <section class="card span-2" id="monitors">
       <h2>Monitors</h2>
@@ -185,6 +196,7 @@
       </dl>
     </section>
   </main>
+  </div>
   <script src="settings.js"></script>
 </body>
 </html>
