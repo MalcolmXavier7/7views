@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self';">
 <title>Home</title>
 <style>
   /* The home page of an empty screen. Screens are often small and zoomed out, so everything is sized from the
@@ -11,7 +11,7 @@
   html { background: radial-gradient(120% 90% at 0% 0%, rgba(79, 179, 166, 0.22), transparent 60%), radial-gradient(110% 90% at 100% 100%, rgba(139, 124, 246, 0.22), transparent 60%), #0d1015; }
   body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5em; padding: 1.4em 2em; overflow: hidden auto; }
   .logo { display: flex; align-items: center; gap: 0.5em; font-size: 1.9em; font-weight: 700; letter-spacing: -0.01em; }
-  .mark { display: grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 0.36em; background: linear-gradient(135deg, #4fb3a6, #5f93f0 55%, #8b7cf6); color: #071417; font-weight: 800; box-shadow: 0 0.3em 1.2em rgba(95, 147, 240, 0.35); }
+  .mark { width: 1.5em; height: 1.5em; border-radius: 0.36em; display: block; }
   .hello { margin: -0.9em 0 0; color: var(--dim); font-size: 0.95em; }
   form { width: min(100%, 30em); }
   input {
@@ -40,7 +40,7 @@
   @media (max-height: 260px) { .hello, .tip { display: none; } body { gap: 0.8em; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
-<div class="logo"><span class="mark">7</span><span>Views</span></div>
+<div class="logo"><img class="mark" src="logo-mark.png" alt=""><span>Views</span></div>
 <p class="hello" id="hello"></p>
 <form id="go"><input id="q" type="text" placeholder="Type a site or search" aria-label="Type a site or search" spellcheck="false" autocomplete="off"></form>
 <section id="favs" hidden><h2>Favorites</h2><div class="tiles" id="fav-tiles"></div></section>

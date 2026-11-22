@@ -8,7 +8,9 @@
   --text: #dfe4e9;
   --dim: #85909b;
   --live: #f5b13d;   /* a screen with sound on, a locked screen */
-  --accent: #4fb3a6; /* selected, drop targets, switches that are on */
+  --accent: #d9481f; /* selected, drop targets, switches that are on; pick your own in Look & behavior */
+  --accent-rgb: 217, 72, 31;  /* same color as --accent, as r, g, b, for rgba() */
+  --accent-ink: #f3e6c5;      /* text/icon color that reads on a solid --accent fill */
   --bone: #efe6cf;   /* a saved favorite */
   --radius: 4px;
   --sheen: none;
@@ -66,7 +68,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
 .seg > :first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
 .seg > :last-child { border-radius: 0 6px 6px 0; }
 .seg-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
-.seg-btn.on { background: rgba(79, 179, 166, 0.16); border-color: rgba(79, 179, 166, 0.6); color: var(--accent); position: relative; }
+.seg-btn.on { background: rgba(var(--accent-rgb), 0.16); border-color: rgba(var(--accent-rgb), 0.6); color: var(--accent); position: relative; }
 .seg-btn:disabled { opacity: 0.4; cursor: default; }
 .counter .count {
   display: grid;
@@ -139,7 +141,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
   color: var(--dim);
 }
 .ibtn:hover { background: var(--hover); color: var(--text); }
-.ibtn.on { color: var(--accent); background: rgba(79, 179, 166, 0.12); }
+.ibtn.on { color: var(--accent); background: rgba(var(--accent-rgb), 0.12); }
 .ibtn.quit:hover { background: #c2413b; color: #fff; }
 .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--line); }
 
@@ -161,7 +163,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
   cursor: pointer;
 }
 .toptab svg { width: 12px; height: 12px; }
-.toptab:hover { background: var(--accent); color: #06201d; }
+.toptab:hover { background: var(--accent); color: var(--accent-ink); }
 
 /* ---------------- each screen ---------------- */
 
@@ -193,7 +195,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
 .hdr.live { box-shadow: inset 0 -2px 0 var(--live); }
 .hdr.focused.live { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--live); }
 .hdr.pinned .plock { color: var(--live); }
-.hdr.swap-target, .hdr.drop-target { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(79, 179, 166, 0.25); }
+.hdr.swap-target, .hdr.drop-target { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(var(--accent-rgb), 0.25); }
 .hdr.narrow .back, .hdr.narrow .forward, .hdr.narrow .reload, .hdr.narrow .pipb { display: none; }
 
 .grip { display: grid; place-items: center; flex: none; width: 18px; height: 100%; color: var(--dim); }
@@ -290,7 +292,7 @@ button:focus-visible, .addr-input:focus-visible { outline: 2px solid var(--accen
   animation: pop-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .chip:hover { background: var(--hover); color: var(--text); }
-.chip.pip { color: var(--accent); border-color: rgba(79, 179, 166, 0.5); }
+.chip.pip { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.5); }
 
 .ticker {
   position: absolute;
@@ -340,13 +342,13 @@ body.glass {
   --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.012));
   --radius: 8px;
   background:
-    radial-gradient(120% 80% at 15% 0%, rgba(79, 179, 166, 0.16), transparent 60%),
+    radial-gradient(120% 80% at 15% 0%, rgba(var(--accent-rgb), 0.16), transparent 60%),
     radial-gradient(100% 90% at 100% 100%, rgba(120, 90, 220, 0.16), transparent 60%),
     #0b0e13;
 }
 body.glass .topbar, body.glass .chips, body.glass .ticker { backdrop-filter: blur(18px) saturate(150%); }
 body.glass .frame { background: rgba(255, 255, 255, 0.07); }
-body.glass .frame:hover:not(.fixed) { background: rgba(79, 179, 166, 0.55); }
+body.glass .frame:hover:not(.fixed) { background: rgba(var(--accent-rgb), 0.55); }
 body.glass .hdr { border-top-color: rgba(255, 255, 255, 0.14); }
 
 /* ---------------- narrow walls (locked to part of the screen) ---------------- */
@@ -381,15 +383,10 @@ body.glass .hdr { border-top-color: rgba(255, 255, 255, 0.14); }
   --grad: linear-gradient(135deg, #4fb3a6 0%, #5f93f0 55%, #8b7cf6 100%);
 }
 .brand .mark {
-  display: grid;
-  place-items: center;
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  background: var(--grad);
-  color: #071417;
-  font-weight: 800;
-  font-size: 12px;
+  display: block;
 }
 
 /* the three windows: one for the games, one for shows, one for work */
@@ -458,21 +455,21 @@ body.glass .seg-btn { height: 22px; margin-left: 0; border: 0; border-radius: 7p
 body.glass .seg > :first-child, body.glass .seg > :last-child { border-radius: 7px; }
 body.glass .seg-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); }
 body.glass .seg-btn.on {
-  background: linear-gradient(135deg, rgba(79, 179, 166, 0.34), rgba(139, 124, 246, 0.3));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.34), rgba(139, 124, 246, 0.3));
   color: #fff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 body.glass .counter .count { height: 22px; border: 0; }
 body.glass .pill { border-color: rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.05); border-radius: 9px; }
 body.glass .ibtn { border-radius: 8px; }
-body.glass .ibtn.on { background: linear-gradient(135deg, rgba(79, 179, 166, 0.26), rgba(139, 124, 246, 0.22)); color: #d9fbf5; }
+body.glass .ibtn.on { background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.26), rgba(139, 124, 246, 0.22)); color: #d9fbf5; }
 body.glass .ibtn.muteall.sounding { background: rgba(245, 177, 61, 0.16); color: var(--live); }
 body.glass .hdr { background: var(--sheen), var(--bar-2); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
 body.glass .hdr.focused { box-shadow: inset 0 2px 0 var(--accent), 0 1px 0 rgba(0, 0, 0, 0.35); }
 body.glass .hdr.focused .grip { color: var(--accent); }
 body.glass .hdr.live { background: linear-gradient(90deg, rgba(245, 177, 61, 0.24), rgba(245, 177, 61, 0.05) 55%), var(--sheen), var(--bar-2); box-shadow: inset 0 -2px 0 var(--live); }
 body.glass .hdr.focused.live { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--live); }
-body.glass .hdr.moving { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(79, 179, 166, 0.5); }
+body.glass .hdr.moving { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(var(--accent-rgb), 0.5); }
 body.glass .fav { border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); }
 body.glass .fav:hover { background: rgba(239, 230, 207, 0.14); border-color: rgba(239, 230, 207, 0.4); transform: translateY(-1px); }
 body.glass .chip { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }

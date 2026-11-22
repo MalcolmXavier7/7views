@@ -119,6 +119,7 @@ function defaultConfig() {
     topBar: true, // the settings bar across the top
     onTop: true, // stay above other windows
     glass: true, // frosted bars with rounded corners and light animations
+    accentColor: '#d9481f', // the bar/panel's accent color; pick your own in Look & behavior
     ticker: false, // scores along the bottom
     league: 'basketball/nba',
     zoom: 0.4,
@@ -240,6 +241,7 @@ function loadConfig() {
   out.topBar = out.topBar !== false;
   out.onTop = out.onTop !== false;
   out.glass = out.glass !== false;
+  out.accentColor = /^#[0-9a-f]{6}$/i.test(out.accentColor) ? out.accentColor : base.accentColor;
   out.sharedLogins = out.sharedLogins === true;
   out.boxes = out.boxes !== false;
   out.favorites = cleanFavorites(out.favorites);
@@ -901,6 +903,8 @@ function sendState() {
     glass: cfg.glass,
     boxes: cfg.boxes,
     ticker: cfg.ticker,
+    accentColor: cfg.accentColor,
+    accentInk: (ACCENT_PRESETS.find(([h]) => h === cfg.accentColor) || [, inkFor(cfg.accentColor)])[1],
     ...favoritesIfChanged(),
     focusedId,
     swapTarget: freeDrag?.target || '',
@@ -1319,6 +1323,32 @@ function setFlag(key, on) {
   refreshTray();
 }
 const FLAGS = ['coverTaskbar', 'onTop', 'topBar', 'glass', 'boxes', 'ticker', 'freeLocked', 'dockOn'];
+
+// A handful of curated accent colors (plus "Custom", any hex) offered in Look & behavior. Each carries the ink
+// color (text/icon tone) that reads best on a solid fill of that accent, so the UI never has to compute contrast.
+const ACCENT_PRESETS = [
+  ['#d9481f', '#f3e6c5', 'Terracotta'],
+  ['#4fb3a6', '#06201d', 'Teal'],
+  ['#3a86e0', '#06131f', 'Blue'],
+  ['#8b7cf6', '#140f33', 'Purple'],
+  ['#3fae7a', '#06200f', 'Green'],
+  ['#e0507e', '#2b0714', 'Pink'],
+];
+// Perceived luminance (0-255): picks a readable ink for a hex this list doesn't curate (a typed custom color).
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 150 ? '#1a1310' : '#f3e6c5';
+}
+function setAccent(hex) {
+  const v = String(hex || '');
+  if (!/^#[0-9a-f]{6}$/i.test(v)) return;
+  cfg.accentColor = v.toLowerCase();
+  saveConfig();
+  sendState();
+}
 
 function setDock(edge, size) {
   if (DOCK_EDGES.includes(edge)) cfg.dockEdge = edge;
@@ -1968,6 +1998,8 @@ function panelState() {
     loginCount: vault.available() ? vault.summary().length : 0,
     favorites: cfg.favorites,
     discordInvite: cfg.discordInvite,
+    accentColor: cfg.accentColor,
+    accentPresets: ACCENT_PRESETS,
     panes: cfg.panes.map((p, i) => {
       const e = views.get(p.id);
       return {
@@ -2067,6 +2099,7 @@ const PANEL_ACTIONS = {
   quit: () => app.quit(),
   display: (id) => { if (screen.getAllDisplays().some((d) => d.id === Number(id))) setDisplay(Number(id)); },
   flag: (key, on) => { if (FLAGS.includes(key)) setFlag(key, Boolean(on)); },
+  accent: (hex) => setAccent(hex),
   window: (k) => setWindow(Number(k)),
   renameWindow: (k, name) => renameWindow(k, name),
   dockTo: (edge, size) => dockTo(edge, size),

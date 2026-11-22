@@ -49,6 +49,19 @@ const ICON = {
 // the video button steps through: whole site -> video fit -> video fill -> video fill keeping the bottom -> whole site
 const NEXT_FIT = { off: 'fit', fit: 'fill', fill: 'bottom', bottom: 'off' };
 
+// Main already picked the matching ink color, so this just sets the three CSS custom properties that drive
+// every "selected / on / accent" color in shell.css. Skipped when nothing changed (it runs on every state push).
+let lastAccent = '';
+function applyAccent(hex, ink) {
+  if (!hex || hex === lastAccent) return;
+  lastAccent = hex;
+  const n = parseInt(hex.slice(1), 16);
+  const root = document.documentElement.style;
+  root.setProperty('--accent', hex);
+  root.setProperty('--accent-rgb', `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`);
+  root.setProperty('--accent-ink', ink || '#f3e6c5');
+}
+
 function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 }
@@ -109,7 +122,7 @@ const tab = button('toptab', ICON.down, 'Show the settings bar (Ctrl+Alt+F)', ()
 wall.append(bar, tab);
 
 const brand = el('div', 'brand');
-brand.innerHTML = `${ICON.grip}<b class="mark">7</b><span>Views</span>`;
+brand.innerHTML = `${ICON.grip}<img class="mark" src="logo-mark.png" alt="" width="18" height="18"><span>Views</span>`;
 brand.title = 'Drag the bar to move 7 Views to another monitor';
 
 const winsw = el('div', 'seg winsw');
@@ -577,6 +590,7 @@ function render(state) {
   // favorites only come along when they change; keep the list we already have
   if (!state.favorites) state.favorites = S ? S.favorites : [];
   S = state;
+  applyAccent(S.accentColor, S.accentInk);
   document.body.classList.toggle('glass', S.glass);
   wall.classList.toggle('no-boxes', !S.boxes);
   wall.classList.toggle('busy', Boolean(S.draggingId));

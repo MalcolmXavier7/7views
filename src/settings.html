@@ -9,7 +9,7 @@
 <body>
   <header class="top">
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="15" rx="2.5"/><path d="M2.5 9h19M10 9v9.5"/><path d="M8 21.5h8"/></svg>
+      <img src="logo-mark.png" width="26" height="26" alt="" style="border-radius: 7px;">
       <div>
         <h1>7 Views</h1>
         <p id="status">Control panel</p>
@@ -74,6 +74,9 @@
 
     <section class="card" id="look">
       <h2>Look &amp; behavior</h2>
+      <div class="field"><span class="label">Accent color</span></div>
+      <div class="swatches" id="accent-swatches"></div>
+      <form class="row-form" id="accent-form"><input type="text" id="accent-hex" maxlength="7" placeholder="#rrggbb" aria-label="Custom accent color, as a hex code" spellcheck="false"><button type="submit" class="btn small">Use this color</button></form>
       <div class="switches" id="switches"></div>
     </section>
 

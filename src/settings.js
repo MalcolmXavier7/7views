@@ -287,6 +287,40 @@ $('mute-all').addEventListener('click', () => api.act('muteAll'));
 
 // ---------------- look & behavior ----------------
 
+// Main already picked each preset's ink color, so this just sets the three custom properties that drive every
+// "selected / on / accent" color in settings.css. Applied live so the picker shows its own effect immediately.
+let lastAccent = '';
+function applyAccent() {
+  if (S.accentColor === lastAccent) return;
+  lastAccent = S.accentColor;
+  const preset = S.accentPresets.find(([hex]) => hex === S.accentColor);
+  const ink = preset ? preset[1] : '#1a1310';
+  const n = parseInt(S.accentColor.slice(1), 16);
+  const root = document.documentElement.style;
+  root.setProperty('--accent', S.accentColor);
+  root.setProperty('--accent-rgb', `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`);
+  root.setProperty('--accent-ink', ink);
+}
+
+function renderAccent() {
+  applyAccent();
+  const box = $('accent-swatches');
+  if (!box.children.length) {
+    for (const [hex, , name] of S.accentPresets) {
+      const b = el('button', 'swatch', { type: 'button', title: name, style: `--sw: ${hex}` });
+      b.addEventListener('click', () => api.act('accent', hex));
+      box.append(b);
+    }
+  }
+  [...box.children].forEach((b, k) => b.classList.toggle('on', S.accentPresets[k][0] === S.accentColor));
+  if (!editing($('accent-hex'))) $('accent-hex').value = S.accentColor;
+}
+$('accent-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('accent-hex').value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(v)) api.act('accent', v);
+});
+
 function renderSwitches() {
   const box = $('switches');
   if (!box.children.length) {
@@ -488,6 +522,7 @@ function apply(state) {
   renderLayout();
   renderScreens();
   renderSound();
+  renderAccent();
   renderSwitches();
   renderScores();
   renderFavorites();
