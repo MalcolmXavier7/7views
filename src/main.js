@@ -772,8 +772,12 @@ const fitOn = (mode) => `(() => {
   const biggest = (list, min) => list.filter((el) => area(el) > min).sort((a, b) => area(b) - area(a))[0];
   const target = biggest([...document.querySelectorAll('video')], 2500) || biggest([...document.querySelectorAll('iframe')], 10000);
   if (!target) return false;
+  // Same element, same mode as last pass (the usual case, re-checked every 2.5s in case a player swaps sources): skip
+  // the attribute/stylesheet rewrite below, which forces a full-page style recalc via 'body * { visibility }'.
+  // Re-running that on every video screen every 2.5s was pegging the CPU with several video screens on 'fit'.
+  if (target.getAttribute('data-sv-fit') === '${mode}') return true;
   document.querySelectorAll('[data-sv-fit], [data-sv-fit-up]').forEach((el) => { el.removeAttribute('data-sv-fit'); el.removeAttribute('data-sv-fit-up'); });
-  target.setAttribute('data-sv-fit', '1');
+  target.setAttribute('data-sv-fit', '${mode}');
   for (let el = target.parentElement; el && el !== document.documentElement; el = el.parentElement) el.setAttribute('data-sv-fit-up', '1');
   let st = document.getElementById('__sv_fit_style');
   if (!st) { st = document.createElement('style'); st.id = '__sv_fit_style'; document.documentElement.appendChild(st); }
@@ -2481,6 +2485,7 @@ if (!app.requestSingleInstanceLock()) {
       require('./selftest')(testHooks());
       return;
     }
+    logLine('started');
     createTray();
     fetchScores();
     showWall();
@@ -2507,7 +2512,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => {});
 
   // Older versions reserved screen space for a docked strip; make sure nothing is left reserved.
-  app.on('before-quit', () => { quitting = true; releaseSpace(); });
+  app.on('before-quit', () => { quitting = true; if (!TEST) logLine('quitting'); releaseSpace(); });
   app.on('will-quit', () => { globalShortcut.unregisterAll(); releaseSpace(); });
   process.on('exit', releaseSpace);
   process.on('uncaughtException', (err) => {
