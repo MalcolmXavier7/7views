@@ -62,6 +62,10 @@ function applyAccent(hex, ink) {
   root.setProperty('--accent-ink', ink || '#f3e6c5');
 }
 
+// How much the floating dock (and its collapsed tab) takes out of the bottom edge, so the ticker and the
+// turned-off/floating chips stack above it instead of under it.
+function dockSpace() { return S.topBar ? S.toolbarH : S.tabH; }
+
 function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
 }
@@ -115,53 +119,17 @@ function trackDrag(target, e, { onStart, onMove, onEnd }) {
   target.addEventListener('pointercancel', up);
 }
 
-// ================= settings bar =================
+// ================= dock (quick actions + favorites, floating at the bottom) =================
+// Window switch, monitor picker, presets and the screen counter moved to the control panel (the gear below) —
+// this bar is only for what you touch while watching.
 
 const bar = el('div', 'topbar');
-const tab = button('toptab', ICON.down, 'Show the settings bar (Ctrl+Alt+F)', () => sv.setFlag('topBar', true));
+const tab = button('toptab', ICON.up, 'Show the dock (Ctrl+Alt+F)', () => sv.setFlag('topBar', true));
 wall.append(bar, tab);
 
 const brand = el('div', 'brand');
-brand.innerHTML = `${ICON.grip}<img class="mark" src="logo-mark.png" alt="" width="18" height="18"><span>Views</span>`;
-brand.title = 'Drag the bar to move 7 Views to another monitor';
-
-const winsw = el('div', 'seg winsw');
-winsw.setAttribute('role', 'group');
-winsw.setAttribute('aria-label', 'Window');
-const winBtns = [0, 1, 2].map((k) => {
-  const b = button('seg-btn win', '', `Window ${k + 1} (Ctrl+Alt+${k + 1})`, () => sv.setWindow(k));
-  b.dataset.k = String(k);
-  b.append(el('i', 'win-dot'), el('span', 'win-name'), el('span', 'win-num', { textContent: String(k + 1) }));
-  winsw.append(b);
-  return b;
-});
-
-const monBtn = button('pill mon', '', 'Pick a monitor, or drag the bar onto one (Ctrl+Alt+D)', () => sv.monitorMenu());
-
-const presets = el('div', 'seg presets');
-presets.setAttribute('role', 'group');
-presets.setAttribute('aria-label', 'Arrange screens');
-const presetBtns = [
-  ['side', 'Side', 'Main screen big on the left, the rest beside it'],
-  ['middle', 'Middle', 'Main screen big in the middle, the rest split into columns on the left and right'],
-  ['center', 'Center', 'Small screens across the top, main big in the middle, a wide one along the bottom'],
-  ['grid', 'Grid', 'Every screen the same size'],
-  ['row', 'Row', 'Every screen side by side, equal widths: 2 halves, 3 thirds'],
-].map(([style, label, tip]) => {
-  const b = button('seg-btn', '', tip, () => sv.arrange(style));
-  b.textContent = label;
-  b.dataset.tip = tip;
-  presets.append(b);
-  return [style, b];
-});
-
-const counter = el('div', 'seg counter');
-const minusBtn = button('seg-btn', '', 'One screen fewer', () => sv.setCount(S.paneCount - 1));
-minusBtn.textContent = '−';
-const countLabel = el('span', 'count');
-const plusBtn = button('seg-btn', '', 'One more screen (Ctrl+Alt+N)', () => sv.setCount(S.paneCount + 1));
-plusBtn.textContent = '+';
-counter.append(minusBtn, countLabel, plusBtn);
+brand.innerHTML = '<img class="mark" src="logo-mark.png" alt="" width="20" height="20">';
+brand.title = 'Drag the dock to move 7 Views to another monitor';
 
 const favs = el('div', 'favs');
 let favKey = '';
@@ -180,6 +148,8 @@ const layoutsBtn = button('ibtn', ICON.bookmark, 'Saved layouts: pick one, or sa
 const dockBtn = button('ibtn dockb', ICON.dock, '', () => sv.dockMenu());
 // Float the selected screen in its own small window above everything.
 const pipBtn = button('ibtn', ICON.pip, '', () => { if (S.focusedId) sv.popOut(S.focusedId); });
+// One screen fills the whole wall; the rest keep playing behind it.
+const spotlightBtn = button('ibtn', ICON.expand, '', () => sv.spotlight(S.spotlightId || S.focusedId));
 const muteAllBtn = button('ibtn muteall', ICON.muted, 'Mute every screen (Ctrl+Alt+M)', () => sv.muteAll());
 
 // One short line from main (a preset dropped your locks, 7 Views restarted...), with at most one button.
@@ -206,16 +176,17 @@ tools.append(
   layoutsBtn,
   dockBtn,
   pipBtn,
+  spotlightBtn,
   el('span', 'sep'),
   muteAllBtn,
   button('ibtn', ICON.gear, 'Control panel: every setting in one place (Ctrl+Alt+P)', () => sv.openSettings()),
   el('span', 'sep'),
-  button('ibtn', ICON.up, 'Hide this bar (Ctrl+Alt+F)', () => sv.setFlag('topBar', false)),
+  button('ibtn', ICON.down, 'Hide the dock (Ctrl+Alt+F)', () => sv.setFlag('topBar', false)),
   button('ibtn', ICON.minus, 'Hide 7 Views (Ctrl+Alt+S brings it back)', () => sv.hide()),
   button('ibtn quit', ICON.x, 'Quit 7 Views', () => sv.quit()),
 );
 
-bar.append(brand, winsw, monBtn, presets, counter, favs, noticeEl, tools);
+bar.append(brand, favs, noticeEl, tools);
 
 // Drag the bar (anywhere that isn't a button) to carry the whole wall to another monitor.
 bar.addEventListener('pointerdown', (e) => {
@@ -265,14 +236,6 @@ function renderBar() {
   tab.hidden = S.topBar;
   bar.style.height = `${S.toolbarH}px`;
   tab.style.height = `${S.tabH}px`;
-  winBtns.forEach((b, k) => {
-    const name = (S.windowNames && S.windowNames[k]) || `Window ${k + 1}`;
-    b.classList.toggle('on', k === S.activeWindow);
-    b.setAttribute('aria-pressed', String(k === S.activeWindow));
-    b.querySelector('.win-name').textContent = name;
-    b.title = `${name}: window ${k + 1} (Ctrl+Alt+${k + 1}). Each window keeps its own screens and layout.`;
-    b.setAttribute('aria-label', b.title);
-  });
   renderNotice();
   dockBtn.classList.toggle('on', S.dockOn);
   dockBtn.dataset.edge = S.dockOn ? S.dockEdge : '';
@@ -287,21 +250,18 @@ function renderBar() {
     ? `Picture-in-picture: float ${sel.label} in its own small window above your other apps`
     : 'Picture-in-picture needs at least two screens on';
   pipBtn.setAttribute('aria-label', pipBtn.title);
+  spotlightBtn.disabled = !sel || inPlace.length <= 1;
+  spotlightBtn.classList.toggle('on', Boolean(S.spotlightId));
+  spotlightBtn.innerHTML = S.spotlightId ? ICON.collapse : ICON.expand;
+  spotlightBtn.title = S.spotlightId
+    ? 'End spotlight: bring every screen back (Ctrl+Alt+Z)'
+    : sel && inPlace.length > 1 ? `Spotlight: fill the wall with ${sel.label} (Ctrl+Alt+Z)` : 'Spotlight needs at least two screens on';
+  spotlightBtn.setAttribute('aria-label', spotlightBtn.title);
   const sounding = S.panes.some((p) => !p.muted);
   muteAllBtn.classList.toggle('sounding', sounding);
   muteAllBtn.innerHTML = sounding ? ICON.sound : ICON.muted;
   muteAllBtn.title = sounding ? 'A screen has sound on. Click to mute every screen (Ctrl+Alt+M)' : 'Every screen is muted (Ctrl+Alt+M)';
   muteAllBtn.setAttribute('aria-label', muteAllBtn.title);
-  const cur = S.displays.find((d) => d.current) || S.displays[0];
-  monBtn.innerHTML = `${ICON.monitor}<span>${cur ? `${cur.index}: ${cur.name}` : 'Monitor'}</span>${ICON.caret}`;
-  const locked = S.freeLocked || S.anyLocked;
-  for (const [style, b] of presetBtns) {
-    b.classList.toggle('on', style === S.arrangeStyle);
-    b.title = locked ? `${b.dataset.tip} (unlocks the screens)` : b.dataset.tip;
-  }
-  countLabel.innerHTML = `<b>${S.paneCount}</b><span class="word">&nbsp;screens</span>`;
-  minusBtn.disabled = S.paneCount <= S.minPanes;
-  plusBtn.disabled = S.paneCount >= S.maxPanes;
   for (const b of toggles) {
     const on = Boolean(S[b.dataset.key]);
     b.classList.toggle('on', on);
@@ -321,7 +281,7 @@ function renderChips() {
   const off = S.panes.filter((p) => p.hidden || p.pip);
   chips.hidden = off.length === 0;
   chips.style.height = `${S.hiddenH}px`;
-  chips.style.bottom = S.ticker ? `${S.tickerH}px` : '0';
+  chips.style.bottom = `${dockSpace() + (S.ticker ? S.tickerH : 0)}px`;
   const key = JSON.stringify(off.map((p) => [p.id, p.label, p.pip]));
   if (key === chipsKey) return;
   chipsKey = key;
@@ -598,6 +558,7 @@ function render(state) {
   renderChips();
   ticker.hidden = !S.ticker;
   ticker.style.height = `${S.tickerH}px`;
+  ticker.style.bottom = `${dockSpace()}px`;
   const inPlace = S.panes.filter((q) => !q.hidden && !q.pip).length;
   const live = new Set();
   for (const p of S.panes) { live.add(p.id); renderScreen(p, inPlace); }

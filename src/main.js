@@ -35,8 +35,8 @@ function logLine(msg) {
 }
 
 const HEADER_H = 26;    // a screen's own bar (address, mute, ...)
-const TOOLBAR_H = 36;   // the settings bar across the top
-const TAB_H = 16;       // the settings bar turned off: a slim strip with a tab that brings it back
+const TOOLBAR_H = 36;   // the dock: quick actions + favorites, floating at the bottom
+const TAB_H = 16;       // the dock turned off: a slim strip with a tab that brings it back
 const TICKER_H = 24;    // optional scores along the bottom
 const HIDDEN_H = 28;    // chips for turned-off and floating screens
 const BLOCK_H = 24;     // the red popup-blocked bar under a screen's header
@@ -116,7 +116,7 @@ function defaultConfig() {
     dockOn: false, // take only part of the monitor and reserve it, so other apps' windows fill the rest
     dockEdge: 'right', // which edge the reserved part sits on: left, right, top, bottom
     dockSize: 0.5, // how much of the monitor it takes (of the width for left/right, of the height for top/bottom)
-    topBar: true, // the settings bar across the top
+    topBar: true, // the dock (quick actions + favorites), floating at the bottom
     onTop: true, // stay above other windows
     glass: true, // frosted bars with rounded corners and light animations
     accentColor: '#d9481f', // the bar/panel's accent color; pick your own in Look & behavior
@@ -575,12 +575,14 @@ const visiblePanes = () => cfg.panes.filter((p) => !p.hidden && !views.get(p.id)
 const hiddenCount = () => cfg.panes.length - visiblePanes().length; // each one gets a chip
 const anyLocked = () => visiblePanes().some((p) => p.locked);
 
-const topH = () => (cfg.topBar ? TOOLBAR_H : TAB_H);
-const bottomH = () => (hiddenCount() > 0 ? HIDDEN_H : 0) + (cfg.ticker ? TICKER_H : 0);
+// The dock (quick actions + favorites) now lives at the bottom, not the top; TOOLBAR_H/TAB_H keep their names
+// (selftest.js and testHooks read them) but reserve space at the bottom edge instead.
+const dockH = () => (cfg.topBar ? TOOLBAR_H : TAB_H);
+const bottomH = () => dockH() + (hiddenCount() > 0 ? HIDDEN_H : 0) + (cfg.ticker ? TICKER_H : 0);
 // The area the screens share, in window pixels.
 function wall() {
   const [w, h] = win.getContentSize();
-  return { W: Math.max(1, w), H: Math.max(1, h - topH() - bottomH()), top: topH() };
+  return { W: Math.max(1, w), H: Math.max(1, h - bottomH()), top: 0 };
 }
 
 // Presets. The last screen is the main one.
